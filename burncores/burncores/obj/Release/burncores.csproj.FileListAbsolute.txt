@@ -1,0 +1,6 @@
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\bin\Release\burncores.exe.config
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\bin\Release\burncores.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\bin\Release\burncores.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\obj\Release\burncores.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\obj\Release\burncores.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\obj\Release\burncores.pdb

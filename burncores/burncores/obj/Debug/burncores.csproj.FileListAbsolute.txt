@@ -1,0 +1,7 @@
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\obj\Debug\burncores.csprojResolveAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\obj\Debug\burncores.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\bin\Debug\burncores.exe.config
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\bin\Debug\burncores.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\bin\Debug\burncores.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\obj\Debug\burncores.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\burncores\burncores\obj\Debug\burncores.pdb
