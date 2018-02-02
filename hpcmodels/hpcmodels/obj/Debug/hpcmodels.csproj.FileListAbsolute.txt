@@ -1,0 +1,9 @@
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\bin\Debug\hpcmodels.exe.config
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\bin\Debug\hpcmodels.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\bin\Debug\hpcmodels.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\obj\Debug\hpcmodels.csprojResolveAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\obj\Debug\hpcmodels.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\obj\Debug\hpcmodels.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\obj\Debug\hpcmodels.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\bin\Debug\Newtonsoft.Json.dll
+C:\Users\jamesask\Documents\GitHub\HPC-Code\hpcmodels\hpcmodels\bin\Debug\Newtonsoft.Json.xml

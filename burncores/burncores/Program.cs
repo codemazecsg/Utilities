@@ -26,7 +26,10 @@ namespace burncores
      *      - Provide an output path to write the cpu stats to (after run)
      *      - Configure sampling value for measuring clock speed (to reduce overhead)
      * 
+     *  v1.0.0.1         jamesask        01/08/2018      -Base version.
+     * 
      */
+
     class burncores
     {
 
@@ -449,7 +452,7 @@ namespace burncores
                         default:
 
                             writeConsole(outputLevel.Error, String.Format("An invalid parameter was provided: {0}", args[i].ToString()));
-                            break;
+                            return false;
 
                     }
                 }
@@ -621,5 +624,6 @@ namespace burncores
                 }
             }
         }
+
     }
 }
