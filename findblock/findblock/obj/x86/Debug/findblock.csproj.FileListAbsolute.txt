@@ -1,0 +1,11 @@
+c:\users\jamesask\documents\visual studio 2010\Projects\findblock\findblock\bin\Debug\findblock.exe
+c:\users\jamesask\documents\visual studio 2010\Projects\findblock\findblock\bin\Debug\findblock.pdb
+c:\users\jamesask\documents\visual studio 2010\Projects\findblock\findblock\obj\x86\Debug\ResolveAssemblyReference.cache
+c:\users\jamesask\documents\visual studio 2010\Projects\findblock\findblock\obj\x86\Debug\findblock.exe
+c:\users\jamesask\documents\visual studio 2010\Projects\findblock\findblock\obj\x86\Debug\findblock.pdb
+C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\obj\x86\Debug\findblock.exe
+C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\obj\x86\Debug\findblock.pdb
+C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\bin\Debug\findblock.exe
+C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\bin\Debug\findblock.pdb
+C:\Users\jamesask\Documents\Visual Studio 2012\Projects\findblock\findblock\findblock\obj\x86\Debug\findblock.exe
+C:\Users\jamesask\Documents\Visual Studio 2012\Projects\findblock\findblock\findblock\obj\x86\Debug\findblock.pdb
