@@ -1,0 +1,16 @@
+C:\drop\csvdatagen\csvdatagen\bin\Release\csvdatagen.exe.config
+C:\drop\csvdatagen\csvdatagen\bin\Release\csvdatagen.exe
+C:\drop\csvdatagen\csvdatagen\bin\Release\csvdatagen.pdb
+C:\drop\csvdatagen\csvdatagen\bin\Release\Newtonsoft.Json.dll
+C:\drop\csvdatagen\csvdatagen\bin\Release\Newtonsoft.Json.xml
+C:\drop\csvdatagen\csvdatagen\obj\Release\csvdatagen.exe
+C:\drop\csvdatagen\csvdatagen\obj\Release\csvdatagen.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\bin\Release\csvdatagen.exe.config
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\bin\Release\csvdatagen.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\bin\Release\csvdatagen.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\bin\Release\Newtonsoft.Json.dll
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\bin\Release\Newtonsoft.Json.xml
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Release\csvdatagen.csprojResolveAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Release\csvdatagen.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Release\csvdatagen.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Release\csvdatagen.pdb
