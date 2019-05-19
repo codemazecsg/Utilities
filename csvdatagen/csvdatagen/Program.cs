@@ -19,6 +19,7 @@ namespace csvdatagen
     #
     #  v1.0.0.1     -  05/15/2019   Base Version
     #  v1.0.0.2     -  05/19/2019   Changed scope of Random instance for performance improvements and fixed bugs with Date generation in the same year
+    #  v1.0.0.3     -  05/19/2019   Changed help display to accurately reflect recent changes
     #
     #
     */
@@ -1305,8 +1306,6 @@ namespace csvdatagen
             help.Append("/N              Naming convention for CSV files (a ordinal number will be appended).");
             help.Append(Environment.NewLine);
             help.Append("/F              Cache flush value that sets how many internal random rows of data are generated before being flushed to the CSV file.   Default is 100,000.");
-            help.Append(Environment.NewLine);
-            help.Append("/W              Adds a sub second wait between request for random numbers to increase randomness since the .NET Random class uses the system clock as a seed value.");
             help.Append(Environment.NewLine);
             help.Append("/D              Use alternate date format of YYYY-MM-DD as oppposed to MM/DD/YYYY.");
             help.Append(Environment.NewLine);
