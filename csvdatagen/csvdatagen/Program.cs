@@ -17,7 +17,8 @@ namespace csvdatagen
     #  author: Jay Askew  2019 (c)
     #  
     #
-    #  v1.0.0.1     -  01/12/2019   Base Version
+    #  v1.0.0.1     -  05/15/2019   Base Version
+    #  v1.0.0.2     -  05/19/2019   Changed scope of Random instance for performance improvements and fixed bugs with Date generation in the same year
     #
     #
     */
@@ -33,6 +34,10 @@ namespace csvdatagen
         static DateTime end;
         static bool alternateDateFormat = false;
         static bool relaxSelectivity = false;
+
+        // Random # generators
+        static Random rand = new Random();
+        static Random rString = new Random();
 
         // file reference
         static string inputFormatFile = string.Empty;
@@ -354,8 +359,6 @@ namespace csvdatagen
         // generate random INT64 as string
         static string getRandomIntegerAsString(Int64 minValue, Int64 maxValue)
         {
-            // get the # generator
-            Random rand = new Random();
 
             // using the .NET random class has limitations as it only generates INT numbers by default.  If we need large numbers, then we need to use another method - we could move to the cryptography lib which I believe we could use for RNG.
             // so we will check to see what our max is to determine which method to use - the problem is that the large generator only generates large #s so we need to accommodate for that as well
@@ -456,11 +459,10 @@ namespace csvdatagen
 
                 char c;
                 StringBuilder b = new StringBuilder();
-                Random r = new Random();
 
                 for (int i = 0; i < _size; i++)
                 {
-                    c = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * r.NextDouble() + 65)));
+                    c = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * rString.NextDouble() + 65)));
                     b.Append(c);
                 }
 
@@ -488,7 +490,12 @@ namespace csvdatagen
             string _day;
 
             // get month
-            if (minYear.ToString() == _year)
+            if (minYear == maxYear)
+            {
+                // we have the same year
+                _month = getRandomIntegerAsString(minMonth, (maxMonth + 1));
+            }
+            else if (minYear.ToString() == _year)
             {
                 // in start year
                 _month = getRandomIntegerAsString(minMonth, 12);
@@ -1963,9 +1970,22 @@ namespace csvdatagen
                                 _selC = -1;
                             }
 
-                            Int64 _minValue = Int64.Parse(c.minvalue.ToString());
-                            Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
-                            Int64 _diff = ((_maxValue - _minValue) + 1); // needed because we want the values at both ends of the range
+                            Int64 _diff = 0;   // we need to check the # of selective values in the range defined
+
+                            if (c.dataType == CsvFormatter.dataTypes.Date)
+                            {
+                                DateTime _minvalue = DateTime.Parse(c.minvalue.ToString());
+                                DateTime _maxValue = DateTime.Parse(c.maxValue.ToString());
+                                TimeSpan t = _maxValue.Subtract(_minvalue);
+                                _diff = (Int64)t.TotalDays;
+                            }
+                            else
+                            {
+                                Int64 _minValue = Int64.Parse(c.minvalue.ToString());
+                                Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
+                                _diff = ((_maxValue - _minValue) + 1); // needed because we want the values at both ends of the range
+                            }
+
                             if (_selC > _diff)
                             {
                                 sendToConsole(ConsoleColor.Red, "Selectivity cannot be greater than min / max value range.  Setting selectivity to random (-1).");
