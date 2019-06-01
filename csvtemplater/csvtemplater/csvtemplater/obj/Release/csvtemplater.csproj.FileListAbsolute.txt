@@ -1,0 +1,9 @@
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\bin\Release\csvtemplater.exe.config
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\bin\Release\csvtemplater.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\bin\Release\csvtemplater.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\bin\Release\Newtonsoft.Json.dll
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\bin\Release\Newtonsoft.Json.xml
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\obj\Release\csvtemplater.csprojResolveAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\obj\Release\csvtemplater.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\obj\Release\csvtemplater.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\csvtemplater\csvtemplater\csvtemplater\obj\Release\csvtemplater.pdb

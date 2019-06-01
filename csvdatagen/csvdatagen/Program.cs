@@ -20,6 +20,18 @@ namespace csvdatagen
     #  v1.0.0.1     -  05/15/2019   Base Version
     #  v1.0.0.2     -  05/19/2019   Changed scope of Random instance for performance improvements and fixed bugs with Date generation in the same year
     #  v1.0.0.3     -  05/19/2019   Changed help display to accurately reflect recent changes
+    #  v1.0.0.4     -  05/21/2019   Added support for different encoding types: ASCII, UTF-8, UTF-16 (default), and UTF-32
+    #  v1.0.0.5     -  05/21/2019   Made changes to selectivity handle to allow for uniqueness when selectivity == numberOfRows and added warnings
+    #  v1.0.0.6     -  05/21/2019   Fixed bug with file creation w/o headers
+    #  v1.0.0.7     -  05/22/2019   Changed value list to provide uniqueness when number of values < numberOfRows, added country support, and changed random string to support lower case
+    #  v1.0.0.8     -  05/22/2019   Added console updates for selectivity data generation
+    #  v1.0.0.9     -  05/22/2019   Added hold termination switch and fixed minor formatting in displayFormatFile()
+    #  v1.0.0.10    -  05/23/2019   Fixed length of time issue for stats
+    #  v1.0.0.11    -  05/23/2019   Added more detail on progress of creating selectivity sets and loading value lists
+    #  v1.0.0.12    -  05/28/2019   Added special feature of string to generate GUIDs when string data types are set to 32 for both min and max
+    #  v1.0.0.13    -  05/29/2019   Added ability to specify field and row terminators
+    #  v1.0.0.14    -  05/30/2019   Fixed bug in getRandomIntegerAsString for number ranges that min/max values straddle the int32/Int64 boundary.
+    #                               Added ability to specific the file extension with /E
     #
     #
     */
@@ -35,15 +47,22 @@ namespace csvdatagen
         static DateTime end;
         static bool alternateDateFormat = false;
         static bool relaxSelectivity = false;
+        static bool lowerString = false;
+        static bool disableUniqueness = false;
+        static bool holdTermination = false;
 
         // Random # generators
         static Random rand = new Random();
         static Random rString = new Random();
 
         // file reference
+        static string FIELD_TERMINATOR = ",";
+        static string ROW_TERMINATOR = Environment.NewLine;
+        static string FILE_EXTENSION = "csv";
         static string inputFormatFile = string.Empty;
         static string outputDirectory = string.Empty;
         static string outputFileNameConvention = string.Empty;
+        static Encoding encode = Encoding.Unicode;                  // default UTF-16
 
         // model ref
         static CsvFormatter _csv;
@@ -70,6 +89,7 @@ namespace csvdatagen
         static string[] streetNames = null;     // common street names in the US
         static string[] cities = null;          // common cities in the US
         static string[] states = null;          // list of 50 US states
+        static string[] countries = null;       // countries of the world
 
         // special class data files
         static string _stateData = string.Format(@"{0}\{1}", Directory.GetCurrentDirectory(), "states.txt");
@@ -77,6 +97,7 @@ namespace csvdatagen
         static string _firstNameData = string.Format(@"{0}\{1}", Directory.GetCurrentDirectory(), "firstnames.txt");
         static string _lastNameData = string.Format(@"{0}\{1}", Directory.GetCurrentDirectory(), "lastnames.txt");
         static string _streetData = string.Format(@"{0}\{1}", Directory.GetCurrentDirectory(), "streets.txt");
+        static string _countryData = string.Format(@"{0}\{1}", Directory.GetCurrentDirectory(), "countries.txt");
 
         // main entry point
         static void Main(string[] args)
@@ -252,6 +273,26 @@ namespace csvdatagen
 
                             break;
 
+                        case CsvFormatter.SpecialDataClasses.Country:
+
+                            // check and get country data loaded
+                            if (countries == null)
+                            {
+                                if (!File.Exists(_countryData))
+                                {
+                                    sendToConsole(ConsoleColor.Red, "Country data not found in the local directory.");
+                                    return;
+                                }
+
+                                if (!loadCountryData())
+                                {
+                                    sendToConsole(ConsoleColor.Red, "Failed to load required country data.");
+                                    return;
+                                }
+                            }
+
+                            break;
+
                         case CsvFormatter.SpecialDataClasses.City:
 
                             // check and get city data loaded
@@ -279,6 +320,9 @@ namespace csvdatagen
                     }
                 }
             }
+
+            // take timestamp
+            start = DateTime.Now;
 
             // check and build selectivity domains and value list files
             // first we have to determine if we have any special columns and then initialize the top level array
@@ -338,9 +382,6 @@ namespace csvdatagen
                 }
             }
 
-            // take timestamp
-            start = DateTime.Now;
-
             // finally generate the data
             if (!generateCsvData())
             {
@@ -354,6 +395,11 @@ namespace csvdatagen
             writeSummary();
 
             // we're done.
+            if (holdTermination)
+            {
+                sendToConsole(defaultColor, "Data generation has completed.  Press ENTER to terminate.", false, false);
+                Console.ReadLine();
+            }
 
         }
 
@@ -371,7 +417,7 @@ namespace csvdatagen
             }
             else if (maxValue > int.MaxValue && minValue < int.MaxValue)
             {
-                // we have a range that covers both
+                // we have a range that covers both - here we don't strictly guarantee absolute min-max range but try to honor the magnitude of the number range requested
                 Random selector = new Random();
                 int k = minValue.ToString().Length;
                 int j = selector.Next(k, 18);
@@ -387,13 +433,23 @@ namespace csvdatagen
                 {
                     // a high-order value
                     // however these always return full 8 bytes which result in 18 or 19 digit #s so we will randomize how much is returned
+                    // ** see note below
                     byte[] b = new byte[8];
 
                     rand.NextBytes(b);
                     string s = BitConverter.ToUInt64(b, 0).ToString();
 
+                    // in some cases the number returned can be shorter (less magnitude) than the random indexer for J
+                    // in this case we just return the whole #
                     // we want to return something on the magnitude of the range requested
-                    return s.Substring(0, j);
+                    if (s.Length < j)
+                    {
+                        return s.ToString();
+                    }
+                    else
+                    {
+                        return s.Substring(0, j);
+                    }
                 }
             }
             else
@@ -411,8 +467,17 @@ namespace csvdatagen
                 rand.NextBytes(b);
                 string s = BitConverter.ToUInt64(b, 0).ToString();
 
+                // in some cases the number returned can be shorter (less magnitude) than the random indexer for J
+                // in this case we just return the whole #
                 // we want to return something on the magnitude of the range requested
-                return s.Substring(0, j);
+                if (s.Length < j)
+                {
+                    return s.ToString();
+                }
+                else
+                {
+                    return s.Substring(0, j);
+                }
 
             }
         }
@@ -450,6 +515,12 @@ namespace csvdatagen
 
             try
             {
+                if (minValue == 32 && maxValue == 32)
+                {
+                    // special code for GUID
+                    return Guid.NewGuid().ToString();
+                }
+
                 string size = getRandomIntegerAsString(minValue, maxValue);
                 int _size = 16;
 
@@ -588,7 +659,9 @@ namespace csvdatagen
         // get random Country
         static string getRandomCountry()
         {
-            return "US";
+            string _index = getRandomIntegerAsString(0, (countries.Length - 1));
+            int _idx = int.Parse(_index);
+            return countries[_idx];
         }
 
         // get random zip code
@@ -629,6 +702,14 @@ namespace csvdatagen
             // get ref to column
             CsvFormatter.column c = _csv.columns[colIndex];
 
+            // update
+            sendToConsole(ConsoleColor.Yellow, string.Format(@"Generating selectivity date for column '{0}'", c.columnName.ToString()), true, true);
+            sendToConsole(ConsoleColor.Yellow, string.Empty, true, true);
+
+            // get location
+            int Left = Console.CursorLeft;
+            int Top = Console.CursorTop;
+
             // check to see if we have a special data type
             if (c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
             {
@@ -653,6 +734,9 @@ namespace csvdatagen
                         {
                             _items.Add(val);
                         }
+
+                        // send update to console
+                        selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                     }
                 }
                 else if (c.dataType == CsvFormatter.dataTypes.String)
@@ -675,6 +759,9 @@ namespace csvdatagen
                         {
                             _items.Add(val);
                         }
+
+                        // send update to console
+                        selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                     }
                 }
                 else if (c.dataType == CsvFormatter.dataTypes.Decimal)
@@ -697,6 +784,9 @@ namespace csvdatagen
                         {
                             _items.Add(val);
                         }
+
+                        // send update to console
+                        selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                     }
                 }
                 else
@@ -719,6 +809,9 @@ namespace csvdatagen
                         {
                             _items.Add(val);
                         }
+
+                        // send update to console
+                        selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                     }
                 }
             }
@@ -750,17 +843,39 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
 
                     case CsvFormatter.SpecialDataClasses.Country:
 
-                        // special case as we only support 'US' for now
+                        if (c.selectivity > countries.Length)
+                        {
+                            sendToConsole(ConsoleColor.Red, "Selectivity value exceeds number of available countries.  Relaxing selectivity requirement (duplicates may result).");
+                            relaxSelectivity = true;
+                        }
+
                         while (_items.Count < c.selectivity)
                         {
-                            string val = getRandomCity();
-                            _items.Add(val);
+                            string val = getRandomCountry();
+
+                            if (!relaxSelectivity)
+                            {
+                                if (!_items.Contains(val))
+                                {
+                                    _items.Add(val);
+                                }
+                            }
+                            else
+                            {
+                                _items.Add(val);
+                            }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -788,6 +903,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -815,6 +933,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -836,6 +957,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -857,6 +981,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -878,6 +1005,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -905,6 +1035,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -926,6 +1059,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -947,6 +1083,9 @@ namespace csvdatagen
                             {
                                 _items.Add(val);
                             }
+
+                            // send update to console
+                            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top);
                         }
 
                         break;
@@ -959,11 +1098,30 @@ namespace csvdatagen
                 }
             }
 
+
+            // send update to console
+            selectivityGenerationUpdate(_items.Count, c.selectivity, Left, Top, _items.Count);
+
             // convert into selectivity j-array
             selColumns[_idx] = _items.ToArray();
             currNextSelectIndex++;
 
             return _idx;
+        }
+
+        // send update during selectivity generation
+        static void selectivityGenerationUpdate(long count, long total, int Left, int Top, int updateLevel = 100)
+        {
+            string update = @"PROGRESS >> {0} rows of selectivity data generated of {1} total rows. {2}";
+
+            // send update to console
+            if ((count % updateLevel) == 0)
+            {
+                // update console
+                Console.CursorLeft = Left;
+                Console.CursorTop = Top;
+                sendToConsole(ConsoleColor.Yellow, string.Format(update.ToString(), count.ToString("000000"), total.ToString("000000"), " ".PadRight(30)));
+            }
         }
 
         // get value list
@@ -972,12 +1130,19 @@ namespace csvdatagen
             // create list to hold
             List<string> _values = new List<string>();
 
+            string update = @"PROGRESS >> {0} values loaded from '{1}'. {2}";
+
             // record current index
             int _idx = currNextSelectIndex;
 
             try
             {
-                sendToConsole(defaultColor, string.Format(@"Loading value list at location: '{0}'", valueListPath.ToString()));
+                sendToConsole(defaultColor, string.Format(@"Loading value list at location: '{0}'", valueListPath.ToString()), true, true);
+
+                // Get position
+                int Left = Console.CursorLeft;
+                int Top = Console.CursorTop;
+                int count = 0;
 
                 StreamReader sr = new StreamReader(valueListPath);
 
@@ -985,8 +1150,23 @@ namespace csvdatagen
                 {
                     string _currentValue = sr.ReadLine();
                     _values.Add(_currentValue.Trim());
+                    count++;
+
+                    // provide an update for every 100 rows
+                    if ((count % 100) == 0)
+                    {
+                        Console.CursorLeft = Left;
+                        Console.CursorTop = Top;
+                        sendToConsole(ConsoleColor.Yellow, string.Format(update.ToString(), count.ToString("000000"), valueListPath.ToString(), " ".PadRight(30)));
+                    }
                 }
 
+                // final update
+                Console.CursorLeft = Left;
+                Console.CursorTop = Top;
+                sendToConsole(ConsoleColor.Yellow, string.Format(update.ToString(), count.ToString("000000"), valueListPath.ToString(), " ".PadRight(30)));
+
+                // write array into j-array
                 selColumns[_idx] = _values.ToArray();
 
                 // increment index
@@ -1005,14 +1185,15 @@ namespace csvdatagen
         // technically just gets a new file name to write to
         static string initializeNewCsvDataFile()
         {
+
             string _filename = string.Empty;
             if (outputFileNameConvention != string.Empty)
             {
-                _filename = string.Format(@"{0}\{1}_{2}_{3}.csv", outputDirectory.ToString(), outputFileNameConvention.ToString(), _csv.tableName.ToString(), fileCount.ToString("000"));
+                _filename = string.Format(@"{0}\{1}_{2}_{3}.{4}", outputDirectory.ToString(), outputFileNameConvention.ToString(), _csv.tableName.ToString(), fileCount.ToString("000"), FILE_EXTENSION.ToString().Replace(".", ""));
             }
             else
             {
-                _filename = string.Format(@"{0}\{1}_{2}.csv", outputDirectory.ToString(), _csv.tableName.ToString(), fileCount.ToString("000"));
+                _filename = string.Format(@"{0}\{1}_{2}.{4}", outputDirectory.ToString(), _csv.tableName.ToString(), fileCount.ToString("000"), FILE_EXTENSION.ToString().Replace(".", ""));
             }
 
             if (_csv.printColumnNames)
@@ -1030,12 +1211,11 @@ namespace csvdatagen
                     cnt++;
                 }
 
-                File.WriteAllText(_filename, _headers);
+                File.WriteAllText(_filename, _headers, encode);
             }
             else
             {
-                FileStream f = File.Create(_filename);
-                f.Close();
+                File.Create(_filename).Close();
             }
 
             fileCount++;    // increment file count
@@ -1060,6 +1240,34 @@ namespace csvdatagen
                 }
 
                 states = _states.ToArray();
+            }
+            catch (Exception ex)
+            {
+                sendToConsole(ConsoleColor.Red, ex.Message.ToString());
+                return false;
+            }
+
+            return true;
+        }
+
+        // load country data
+        static bool loadCountryData()
+        {
+            List<string> _countries = new List<string>();
+
+            try
+            {
+                sendToConsole(defaultColor, "Loading country data...");
+
+                StreamReader sr = new StreamReader(_countryData);
+
+                while (!sr.EndOfStream)
+                {
+                    string _currentState = sr.ReadLine();
+                    _countries.Add(_currentState.Trim());
+                }
+
+                countries = _countries.ToArray();
             }
             catch (Exception ex)
             {
@@ -1265,9 +1473,77 @@ namespace csvdatagen
 
                         break;
 
-                    case "R":
+                    case "V":
                         // relax selectivity format
                         relaxSelectivity = true;
+
+                        break;
+
+                    case "A":
+                        // change to ASCII encoding
+                        encode = UnicodeEncoding.ASCII;
+
+                        break;
+
+                    case "U":
+                        // change to UTF-8, 16, or 32 encoding
+                        string _encode = args[i].Substring(2);
+                        int _e = 16;
+
+                        // assign to var
+                        if (!int.TryParse(_encode.ToString(), out _e))
+                        {
+                            sendToConsole(ConsoleColor.Red, "Incorrect encoding value.");
+                            return false;
+                        }
+
+                        if (_e == 8)
+                        {
+                            encode = Encoding.UTF8;
+                        }
+                        else if (_e == 32)
+                        {
+                            encode = Encoding.UTF32;
+                        }
+                        else
+                        {
+                            encode = Encoding.Unicode;
+                        }
+
+                        break;
+
+                    case "L":
+                        // lower case strings
+                        lowerString = true;
+
+                        break;
+
+                    case "X":
+                        // disable uniqueness
+                        disableUniqueness = true;
+
+                        break;
+
+                    case "C":
+                        // hold termination
+                        holdTermination = true;
+
+                        break;
+
+                    case "T":
+                        FIELD_TERMINATOR = args[i].Substring(2);
+
+                        break;
+
+                    case "R":
+                        // row terminator
+                        ROW_TERMINATOR = args[i].Substring(2);
+
+                        break;
+
+                    case "E":
+                        // file extension
+                        FILE_EXTENSION = args[i].Substring(2);
 
                         break;
 
@@ -1307,12 +1583,28 @@ namespace csvdatagen
             help.Append(Environment.NewLine);
             help.Append("/F              Cache flush value that sets how many internal random rows of data are generated before being flushed to the CSV file.   Default is 100,000.");
             help.Append(Environment.NewLine);
-            help.Append("/D              Use alternate date format of YYYY-MM-DD as oppposed to MM/DD/YYYY.");
+            help.Append("/D              Use alternate date format of YYYY-MM-DD as opposed to MM/DD/YYYY.");
             help.Append(Environment.NewLine);
-            help.Append("/R              Relax selectivity requirement - selectivity will be on a best effort basis.");
+            help.Append("/V              Relax selectivity requirement - selectivity will be on a best effort basis.");
+            help.Append(Environment.NewLine);
+            help.Append("/A              Use ASCII encoding (default is Unicode UTF-16).");
+            help.Append(Environment.NewLine);
+            help.Append("/U              Use UTF-8 (/U8), UTF-16 (/U16), or UTF-32 (/U32) encoding (default is Unicode UTF-16).");
+            help.Append(Environment.NewLine);
+            help.Append("/L              Use lower case for random strings.");
+            help.Append(Environment.NewLine);
+            help.Append("/X              Disable uniqueness handling for value list.");
+            help.Append(Environment.NewLine);
+            help.Append("/C              Holds 'Termination' at the end of generating csv data so summary stats and results can be read before the window closes (commonly used when automatically launching csvdatagen).");
+            help.Append(Environment.NewLine);
+            help.Append("/T              Specify the field terminator.  Default is a comma.");
+            help.Append(Environment.NewLine);
+            help.Append("/R              Specify the row terminator.  Default is CRLF.");
+            help.Append(Environment.NewLine);
+            help.Append("/E              Specify the file extension to use.  The default is .csv.");
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
-            help.Append(Environment.NewLine);
+
 
             sendToConsole(defaultColor, help.ToString());
 
@@ -1716,7 +2008,7 @@ namespace csvdatagen
                                 sendToConsole(ConsoleColor.Red, "You must enter a valid interger value.");
                                 _maxValue = string.Empty;
                             }
-                            else if (_m <= int.Parse(c.minvalue.ToString()))
+                            else if (_m <= int.Parse(c.minvalue.ToString()) && _m != 32)  // if both min and max are set to 32, then we generate GUIDs
                             {
                                 sendToConsole(ConsoleColor.Red, "The maximum length of the column cannot be less than or equal to the minimum length of the column.");
                                 _maxValue = string.Empty;
@@ -1969,6 +2261,12 @@ namespace csvdatagen
                                 _selC = -1;
                             }
 
+                            if (_selC > _csv.numberOfRows)
+                            {
+                                sendToConsole(ConsoleColor.Red, "Selectivity cannot be greater than the number of rows.  Setting selectivity to random (-1).");
+                                _selC = -1;
+                            }
+
                             Int64 _diff = 0;   // we need to check the # of selective values in the range defined
 
                             if (c.dataType == CsvFormatter.dataTypes.Date)
@@ -2063,7 +2361,7 @@ namespace csvdatagen
 
             if (inputFormatFile != string.Empty)
             {
-                sendToConsole(defaultColor, (@"InputFile: ".PadRight(40) + inputFormatFile.ToString()));
+                sendToConsole(defaultColor, (@"InputFile: ".PadRight(50) + inputFormatFile.ToString()));
             }
             sendToConsole(defaultColor, (@"TableName: ".PadRight(50) + _csv.tableName.ToString()));
             sendToConsole(defaultColor, (@"Version: ".PadRight(50) + _csv.version.ToString()));
@@ -2089,8 +2387,28 @@ namespace csvdatagen
                 sendToConsole(defaultColor, (@"     Mantissa: ".PadRight(40) + _csv.columns[i].mantissa.ToString()));
                 sendToConsole(defaultColor, (@"     Selectivity: ".PadRight(40) + _csv.columns[i].selectivity.ToString()));
                 sendToConsole(defaultColor, (@"     Selectivity Column: ".PadRight(40) + _csv.columns[i].selColumn.ToString()));
-            }
 
+                if (_csv.columns[i].monotonic || (_csv.columns[i].selectivity == _csv.numberOfRows))
+                {
+                    sendToConsole(defaultColor, (@"     Unique: ".PadRight(40) + "True"));
+                }
+                else if (_csv.columns[i].selColumn > -1 && _csv.columns[i].valueListFile != string.Empty)
+                {
+                    // we have a value list
+                    if (_csv.numberOfRows <= selColumns[_csv.columns[i].selColumn].Length)
+                    {
+                        sendToConsole(defaultColor, (@"     Unique: ".PadRight(40) + "True"));
+                    }
+                    else
+                    {
+                        sendToConsole(defaultColor, (@"     Unique: ".PadRight(40) + "False"));
+                    }
+                }
+                else
+                {
+                    sendToConsole(defaultColor, (@"     Unique: ".PadRight(40) + "False"));
+                }
+            }
         }
 
         // generates data files
@@ -2183,18 +2501,41 @@ namespace csvdatagen
                     // we have a list of provided values that were loaded into the j-array
                     // we must get the location in the selectivty j-array 
                     int s = c.selColumn;
-                    // get a random index into the selectivity j-array
-                    int r = int.Parse(getRandomIntegerAsString(0, (selColumns[s].Length)));
-                    currentRow[i] = selColumns[s][r];
+
+                    // now if the # of rows is less than the number of values provided in the valueList, we can ensure uniqueness
+                    if (_csv.numberOfRows <= selColumns[s].Length && !disableUniqueness)
+                    {
+                        // we can provide unique values since we have fewer rows than values
+                        int r = (int)rowCount;  // progress linearly into the j-array
+                        currentRow[i] = selColumns[s][r];
+                    }
+                    else
+                    {
+                        // we have more rows so we will grab from the value list randomly - not unique but ensuring selectivity
+                        // get a random index into the selectivity j-array
+                        int r = int.Parse(getRandomIntegerAsString(0, (selColumns[s].Length)));
+                        currentRow[i] = selColumns[s][r];
+                    }
                 }
                 else if (c.selectivity != -1)
                 {
-                    // we have a list of values for selectivity purposes
-                    // get the location in the j-array much like the valueListFile
-                    int s = c.selColumn;
-                    // get a random index into the selectivity j-array
-                    int r = int.Parse(getRandomIntegerAsString(0, (selColumns[s].Length)));
-                    currentRow[i] = selColumns[s][r];
+                    if (_csv.numberOfRows == c.selectivity)
+                    {
+                        // since the selectivity is equal to the # of rows - we have a unique requirement
+                        // because when selectivity == numberOfRows it implies that each row is different and hence unique
+                        int s = c.selColumn;
+                        int r = (int)rowCount;   // then into the selectivity j-array we need to progress linearly
+                        currentRow[i] = selColumns[s][r];
+                    }
+                    else
+                    {
+                        // we have random cardinality with this selectivity
+                        // get the location in the j-array much like the valueListFile
+                        int s = c.selColumn;
+                        // get a random index into the selectivity j-array
+                        int r = int.Parse(getRandomIntegerAsString(0, (selColumns[s].Length)));
+                        currentRow[i] = selColumns[s][r];
+                    }
                 }
                 else if (c.monotonic)
                 {
@@ -2291,7 +2632,14 @@ namespace csvdatagen
                             break;
 
                         case CsvFormatter.dataTypes.String:
-                            currentRow[i] = generateRandomString(n, x);
+                            if (lowerString)
+                            {
+                                currentRow[i] = generateRandomString(n, x).ToLower();
+                            }
+                            else
+                            {
+                                currentRow[i] = generateRandomString(n, x);
+                            }
                             break;
 
                         case CsvFormatter.dataTypes.Decimal:
@@ -2372,7 +2720,7 @@ namespace csvdatagen
             // open file
             try
             {
-                sr = new StreamWriter(currCsvFile, true, Encoding.UTF8);
+                sr = new StreamWriter(currCsvFile, true, encode);
             }
             catch (Exception ex)
             {
@@ -2392,7 +2740,7 @@ namespace csvdatagen
                     // build one line
                     if (j > 0)
                     {
-                        sb.Append(",");
+                        sb.Append(FIELD_TERMINATOR);
                     }
 
                     sb.Append(cache[i, j].ToString());
@@ -2404,7 +2752,7 @@ namespace csvdatagen
                     // write to stream
                     if (rowsCurrentlyWritten > 0 || (rowsCurrentlyWritten == 0 && _csv.printColumnNames))
                     {
-                        sr.Write(Environment.NewLine);
+                        sr.Write(ROW_TERMINATOR);
                     }
                     sr.Write(sb.ToString());
                     rowsCurrentlyWritten++;
