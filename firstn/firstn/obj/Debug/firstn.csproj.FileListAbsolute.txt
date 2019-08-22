@@ -1,0 +1,7 @@
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\bin\Debug\firstn.exe.config
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\bin\Debug\firstn.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\bin\Debug\firstn.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\obj\Debug\firstn.csprojResolveAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\obj\Debug\firstn.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\obj\Debug\firstn.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\obj\Debug\firstn.pdb

@@ -1,0 +1,6 @@
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\bin\Release\firstn.exe.config
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\bin\Release\firstn.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\bin\Release\firstn.pdb
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\obj\Release\firstn.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\obj\Release\firstn.exe
+C:\Users\jamesask\Documents\GitHub\HPC-Code\firstn\firstn\obj\Release\firstn.pdb

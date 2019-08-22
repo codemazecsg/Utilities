@@ -32,6 +32,10 @@ namespace csvdatagen
     #  v1.0.0.13    -  05/29/2019   Added ability to specify field and row terminators
     #  v1.0.0.14    -  05/30/2019   Fixed bug in getRandomIntegerAsString for number ranges that min/max values straddle the int32/Int64 boundary.
     #                               Added ability to specific the file extension with /E
+    #  v1.0.0.15    -  06/06/2019   Fixed monotonic seed to support Int64
+    #  v1.0.0.16    -  06/20/2019   Added special default functions (&ASN, &EQL, &GTR, &LSS) and fixed bug not writing a row terminator at the end of a file
+    #  v1.0.0.17    -  07/05/2019   Added new special default &PRO to control the proportional mixture of values taken from more than one value list to set up ratios of values in a table
+    #  v1.0.0.18    -  08/03/2019   Fixed bug in new PRO cmd that was causing a failure when evaluation default values < 4 bytes in length (invalid index reference into string)
     #
     #
     */
@@ -128,6 +132,18 @@ namespace csvdatagen
                     {
                         sendToConsole(ConsoleColor.Red, "Failed to save model file to disk.");
                         return;
+                    }
+                    else
+                    {
+                        string _generateData = "true";
+
+                        sendToConsole(defaultColor, string.Format(@"The model has been saved.  Would you like to generate the data now? [{0} - Enter to accept default]: ", _generateData.ToString().ToUpper()), true, false);
+                        _generateData = Console.ReadLine();
+
+                        if (_generateData.ToLower() == "false" || _generateData.ToLower() == "f")
+                        {
+                            return;
+                        }
                     }
                 }
                 else
@@ -349,7 +365,7 @@ namespace csvdatagen
                     // first, do we have a value list?
                     if (c.valueListFile != string.Empty)
                     {
-                        int _idxV = loadValueList(c.valueListFile);
+                        int _idxV = loadValueList(c.valueListFile, c.defaultValue, _csv.numberOfRows);
                         if (_idxV == -1)
                         {
                             sendToConsole(ConsoleColor.Red, string.Format(@"Failed to load value list at location: '{0}'", c.valueListFile.ToString()));
@@ -359,6 +375,28 @@ namespace csvdatagen
                         {
                             // data loaded - we set and continue as selectivity is set by the number of values in the list
                             c.selColumn = _idxV;
+
+                            // auto-detect data type
+                            string _v = selColumns[_idxV][0];
+
+                            // detect data type
+                            if (DateTime.TryParse(_v, out DateTime _date))
+                            {
+                                c.dataType = CsvFormatter.dataTypes.Date;
+                            }
+                            else if (Int64.TryParse(_v, out Int64 _int))
+                            {
+                                c.dataType = CsvFormatter.dataTypes.Integer;
+                            }
+                            else if (Decimal.TryParse(_v, out Decimal _decimal))
+                            {
+                                c.dataType = CsvFormatter.dataTypes.Decimal;
+                            }
+                            else
+                            {
+                                c.dataType = CsvFormatter.dataTypes.String;
+                            }
+
                             continue;
                         }
                     }
@@ -1125,53 +1163,140 @@ namespace csvdatagen
         }
 
         // get value list
-        static int loadValueList(string valueListPath)
+        static int loadValueList(string valueListPath, string defaultValue, Int64 numberOfRows)
         {
-            // create list to hold
-            List<string> _values = new List<string>();
+            // we need to accommodate that we may have multiple list here
+            List<string> _masterlist = new List<string>();
+            string[] _valueFiles = valueListPath.Split(new char[] { ';' });
+            string _cmd = "undefined";
+            string[] _sizes = null;
 
-            string update = @"PROGRESS >> {0} values loaded from '{1}'. {2}";
+            // we need to determine if we have a proportion defined
+            if (defaultValue.Length > 4 && defaultValue.Substring(0,1) == "&")
+            {
+                _cmd = defaultValue.Substring(0, 4);
 
+                // we have a command - but is it a proportion?
+                if (_cmd == "&PRO")
+                {
+                    _sizes = defaultValue.Substring(5).Trim(new char[] { '[', ']' }).Split(new char[] { ',' });
+                }
+            }
+
+            // if we have a command for &PRO and the sizes of the value lists and proportions don't match, something is wrong
+            if (_cmd == "&PRO" && _sizes != null)
+            {
+                if (_valueFiles.Length != _sizes.Length)
+                {
+                    sendToConsole(ConsoleColor.Red, "For the &PRO command, the number of values lists provided must match the number of proportions provided.");
+                    return -1;
+                }
+            }
+
+            // in all cases, if you only provided 1 value list file, we'll load everything from that one file
+            if (_valueFiles.Length == 1)
+            {
+                _sizes = new string[] { "1" };
+            }
+
+            // make sure sizes add up and are integers
+            decimal accum = 0m;
+            for (int s = 0; s < _sizes.Length; s++)
+            {
+                decimal x = 0m;
+                bool _result = decimal.TryParse(_sizes[s].ToString(), out x);
+
+                if (!_result)
+                {
+                    sendToConsole(ConsoleColor.Red, "One of the sizes provided by the proportion command is an incorrect value.");
+                    return -1;
+                }
+                else
+                {
+                    accum += x;
+                }
+            }
+
+            // final check here
+            if (accum < 1.0m)
+            {
+                sendToConsole(ConsoleColor.Red, "Total sum of sizes provided by the proportion command do not add up to be 1.0");
+                return -1;
+            }
+            
             // record current index
             int _idx = currNextSelectIndex;
 
+            // console update format
+            string update = @"PROGRESS >> {0} values loaded from '{1}'. {2}";
+
             try
             {
-                sendToConsole(defaultColor, string.Format(@"Loading value list at location: '{0}'", valueListPath.ToString()), true, true);
-
-                // Get position
-                int Left = Console.CursorLeft;
-                int Top = Console.CursorTop;
-                int count = 0;
-
-                StreamReader sr = new StreamReader(valueListPath);
-
-                while (!sr.EndOfStream)
+                for (int w = 0; w < _valueFiles.Length; w++)
                 {
-                    string _currentValue = sr.ReadLine();
-                    _values.Add(_currentValue.Trim());
-                    count++;
+                    // create list to hold
+                    List<string> _values = new List<string>();
 
-                    // provide an update for every 100 rows
-                    if ((count % 100) == 0)
+                    sendToConsole(defaultColor, string.Format(@"Loading value list at location: '{0}'", _valueFiles[w].ToString()), true, true);
+
+                    // Get position
+                    int Left = Console.CursorLeft;
+                    int Top = Console.CursorTop;
+                    int count = 0;
+
+                    StreamReader sr = new StreamReader(_valueFiles[w]);
+
+                    while (!sr.EndOfStream)
                     {
-                        Console.CursorLeft = Left;
-                        Console.CursorTop = Top;
-                        sendToConsole(ConsoleColor.Yellow, string.Format(update.ToString(), count.ToString("000000"), valueListPath.ToString(), " ".PadRight(30)));
+                        string _currentValue = sr.ReadLine();
+                        _values.Add(_currentValue.Trim());
+                        count++;
+
+                        // provide an update for every 100 rows
+                        if ((count % 100) == 0)
+                        {
+                            Console.CursorLeft = Left;
+                            Console.CursorTop = Top;
+                            sendToConsole(ConsoleColor.Yellow, string.Format(update.ToString(), count.ToString("000000"), _valueFiles[w].ToString(), " ".PadRight(30)));
+                        }
+                    }
+
+                    // final update
+                    Console.CursorLeft = Left;
+                    Console.CursorTop = Top;
+                    sendToConsole(ConsoleColor.Yellow, string.Format(update.ToString(), count.ToString("000000"), valueListPath.ToString(), " ".PadRight(30)));
+
+                    // write array into temporary array
+                    string[] _temp = _values.ToArray();
+
+                    // now build proportions proprotions
+                    decimal _proportion = decimal.Parse(_sizes[w].ToString());
+                    int rowCount = (int)(_proportion * numberOfRows);
+
+                    // do we have enough proportional rows for the whole table?
+                    if (rowCount < _temp.Length)
+                    {
+                        for (int p = 0; p < rowCount; p++)
+                        {
+                            _masterlist.Add(_temp[p]);
+                        }
+                    }
+                    else
+                    {
+                        for (int t = 0; t < _temp.Length; t++)
+                        {
+                            _masterlist.Add(_temp[t]);
+                        }
                     }
                 }
 
-                // final update
-                Console.CursorLeft = Left;
-                Console.CursorTop = Top;
-                sendToConsole(ConsoleColor.Yellow, string.Format(update.ToString(), count.ToString("000000"), valueListPath.ToString(), " ".PadRight(30)));
-
-                // write array into j-array
-                selColumns[_idx] = _values.ToArray();
+                // assign
+                selColumns[_idx] = _masterlist.ToArray();
 
                 // increment index
                 currNextSelectIndex++;
 
+                // return location
                 return _idx;
                 
             }
@@ -1180,6 +1305,7 @@ namespace csvdatagen
                 sendToConsole(ConsoleColor.Red, ex.Message.ToString());
                 return -1;
             }
+
         }
 
         // technically just gets a new file name to write to
@@ -1193,7 +1319,7 @@ namespace csvdatagen
             }
             else
             {
-                _filename = string.Format(@"{0}\{1}_{2}.{4}", outputDirectory.ToString(), _csv.tableName.ToString(), fileCount.ToString("000"), FILE_EXTENSION.ToString().Replace(".", ""));
+                _filename = string.Format(@"{0}\{1}_{2}.{3}", outputDirectory.ToString(), _csv.tableName.ToString(), fileCount.ToString("000"), FILE_EXTENSION.ToString().Replace(".", ""));
             }
 
             if (_csv.printColumnNames)
@@ -1210,6 +1336,9 @@ namespace csvdatagen
                     _headers += c.columnName.ToString();
                     cnt++;
                 }
+
+                // add row terminator
+                _headers += ROW_TERMINATOR;
 
                 File.WriteAllText(_filename, _headers, encode);
             }
@@ -1761,17 +1890,119 @@ namespace csvdatagen
                 // get any default value
                 sendToConsole(defaultColor, "Enter a default value for this column (this value will AUTOMATICALLY be used for every row) [PRESS ENTER FOR NO DEFAULT VALUE]: ", false, false);
                 string _defaultValue = Console.ReadLine();
+                string _cmd = string.Empty;
 
                 if (_defaultValue.Length > 0)
                 {
-                    c.dataType = CsvFormatter.dataTypes.String;
-                    c.defaultValue = _defaultValue;
-                    _csv.columns[i] = c;
-                    continue;
+                    // for interactive mode, we need to see if the default value contains a special default or command = function - if so it'll be over 4 chars first so we don't index past the end
+                    if (_defaultValue.Length > 4)
+                    {
+                        _cmd = _defaultValue.Substring(0, 4);
+
+                        // this could be a command and only for &ASN do we need to continue to get a value list - safety checks for &GTR and &LSS
+                        if (_cmd.ToUpper() == "&GTR")
+                        {
+                            bool _val = false;
+
+                            while (!_val)
+                            {
+                                sendToConsole(defaultColor, "Enter the maximum integer value for this column: ", false, false);
+                                string _maxValueGTR = Console.ReadLine();
+                                Int64 _m;
+
+                                _val = Int64.TryParse(_maxValueGTR.ToString(), out _m);
+
+                                if (!_val)
+                                {
+                                    sendToConsole(ConsoleColor.Red, "You must enter a valid interger value.");
+                                    _maxValueGTR = string.Empty;
+                                }
+                                else
+                                {
+                                    c.maxValue = _maxValueGTR;
+                                }
+                            }
+                        }
+
+                        if (_cmd.ToUpper() == "&LSS")
+                        {
+                            bool _val = false;
+
+                            while (!_val)
+                            {
+                                sendToConsole(defaultColor, "Enter the minimum integer value for this column: ", false, false);
+                                string _maxValueLSS = Console.ReadLine();
+                                Int64 _m;
+
+                                _val = Int64.TryParse(_maxValueLSS.ToString(), out _m);
+
+                                if (!_val)
+                                {
+                                    sendToConsole(ConsoleColor.Red, "You must enter a valid interger value.");
+                                    _maxValueLSS = string.Empty;
+                                }
+                                else
+                                {
+                                    c.minvalue = _maxValueLSS;
+                                }
+                            }
+                        }
+
+                        if (_cmd.ToUpper() == "&PRO")
+                        {
+                            string[] _sizes = _defaultValue.Substring(5).Trim(new char[] { '[', ']' }).Split(new char[] { ',' });
+
+                            // just checking that we have integers here
+                            // make sure sizes add up and are integers
+                            decimal accum = 0m;
+                            for (int s = 0; s < _sizes.Length; s++)
+                            {
+                                decimal x = 0m;
+                                bool _result = decimal.TryParse(_sizes[s].ToString(), out x);
+
+                                if (!_result)
+                                {
+                                    sendToConsole(ConsoleColor.Red, "One of the sizes provided by the proportion command is an incorrect value.");
+                                    return false;
+                                }
+                                else
+                                {
+                                    accum += x;
+                                }
+                            }
+
+                            // final check here
+                            if (accum < 1.0m)
+                            {
+                                sendToConsole(ConsoleColor.Red, "Total sum of sizes provided by the proportion command do not add up to be 1.0");
+                                return false;
+                            }
+
+                        }
+
+                        // for all we do this
+                        c.dataType = CsvFormatter.dataTypes.String;
+                        c.defaultValue = _defaultValue;
+                        _csv.columns[i] = c;
+
+                        if (_cmd.ToUpper() != "&ASN" && _cmd.ToUpper() != "&PRO")
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        // not long enough to be a command so we know it is a normal default
+                        c.dataType = CsvFormatter.dataTypes.String;
+                        c.defaultValue = _defaultValue;
+                        _csv.columns[i] = c;
+                        continue;
+                    }
                 }
 
                 // get any value list file
                 string _valueListFile = "undefined";
+                string[] _valueListFilesArray;
 
                 while (_valueListFile == "undefined")
                 {
@@ -1780,9 +2011,38 @@ namespace csvdatagen
 
                     if (_valueListFile.Length > 0)
                     {
-                        if (!File.Exists(_valueListFile))
+                        // we must check for multiple files
+                        _valueListFilesArray = _valueListFile.Split(new char[] { ';' });
+
+                        for (int v = 0; v < _valueListFilesArray.Length; v++)
                         {
-                            sendToConsole(ConsoleColor.Red, "The provided file could be found or does not exist.");
+                            if (!File.Exists(_valueListFilesArray[v]))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"One or more of the provided files [{0}] could be found or does not exist.", _valueListFilesArray[v].ToString()));
+                                _valueListFilesArray = null;
+                                _valueListFile = "undefined";
+                            }
+                        }
+
+                        if (_cmd.ToUpper() == "&ASN" && _valueListFilesArray.Length > 1)
+                        {
+                            sendToConsole(ConsoleColor.Red, "You can only provide one value list file for the &ASN command.");
+                            _valueListFilesArray = null;
+                            _valueListFile = "undefined";
+                        }
+                    }
+                    else
+                    {
+                        // nothing was provided which is fine unless we require it for &ASN or &PRO
+                        if (_cmd.ToUpper() == "&ASN")
+                        {
+                            sendToConsole(ConsoleColor.Red, "You must provide a value list file for the &ASN command in the special default.");
+                            _valueListFile = "undefined";
+                        }
+
+                        if (_cmd.ToUpper() == "&PRO")
+                        {
+                            sendToConsole(ConsoleColor.Red, "You must provide one or more value list files for the &PRO command in the special default.");
                             _valueListFile = "undefined";
                         }
                     }
@@ -2108,7 +2368,11 @@ namespace csvdatagen
                 if (c.dataType == CsvFormatter.dataTypes.Integer && c.monotonic && c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
                 {
                     string _monotonicSeed = string.Empty;
-                    int _mSeed = 1;
+                    Int64 _mSeed = 1;
+
+                    Int64 _minSeed = 1;
+                    bool _result = Int64.TryParse(c.minvalue.ToString(), out _minSeed);
+                    if (_result && _minSeed >= 0) { c.monotonicSeed = _minSeed; }
 
                     while (_monotonicSeed == string.Empty)
                     {
@@ -2121,7 +2385,7 @@ namespace csvdatagen
                             _monotonicSeed = c.monotonicSeed.ToString();
                         }
 
-                        if (!int.TryParse(_monotonicSeed.ToString(), out _mSeed))
+                        if (!Int64.TryParse(_monotonicSeed.ToString(), out _mSeed))
                         {
                             sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic seed value.");
                             _monotonicSeed = string.Empty;
@@ -2132,6 +2396,7 @@ namespace csvdatagen
                             {
                                 // need a valid positive value
                                 sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic seed value.");
+                                _monotonicSeed = string.Empty;
                             }
                             else
                             {
@@ -2311,7 +2576,7 @@ namespace csvdatagen
 
                 // construct the csv formatter model
                 _csv = JsonConvert.DeserializeObject<CsvFormatter>(json);
-
+                
             }
             catch (Exception ex)
             {
@@ -2491,10 +2756,25 @@ namespace csvdatagen
                 // get current column definition
                 CsvFormatter.column c = _csv.columns[i];
 
-                if (c.defaultValue != string.Empty)
+                // in the default, PRO is a special situation that is built up front
+                if (c.defaultValue != string.Empty && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "PRO")))
                 {
-                    // we have a default value to set
-                    currentRow[i] = c.defaultValue;
+                    if ((c.defaultValue.Substring(0, 1)) == "&" && ((c.defaultValue.Substring(1, 3).ToUpper() == "ASN") || (c.defaultValue.Substring(1, 3).ToUpper() == "EQL") || (c.defaultValue.Substring(1, 3).ToUpper() == "GTR") ||
+                        (c.defaultValue.Substring(1, 3).ToUpper() == "LSS")))
+                    {
+                        // we have a special default = function
+                        // here we actually need to defer because we don't know if the dependent value has been evaluated yet
+                        currentRow[i] = "__DEFERRED__";
+                    }
+                    else
+                    {
+                        // we have a default value to set
+                        if (c.defaultValue == "__DEFERRED__")
+                        {
+                            sendToConsole(ConsoleColor.Red, String.Format(@"Invalid default value specified for column '{0}'", _csv.columns[i].columnName.ToString()));
+                        }
+                        currentRow[i] = c.defaultValue;
+                    }
                 }
                 else if (c.valueListFile != string.Empty)
                 {
@@ -2548,7 +2828,7 @@ namespace csvdatagen
                     }
                     else
                     {
-                        int j = int.Parse(currentRow[i]);
+                        Int64 j = Int64.Parse(currentRow[i]);
                         currentRow[i] = (j + c.monotonicStep).ToString();
                     }
                 }
@@ -2658,6 +2938,202 @@ namespace csvdatagen
                 }
             }
 
+            // process deferred calculations (special defaults = functions)
+            for (int i = 0; i < _csv.columns.Length; i++)
+            {
+                if (currentRow[i] == "__DEFERRED__")
+                {
+                    // we must get the default string from the column
+                    string _default = _csv.columns[i].defaultValue.ToString();
+                    string _cmd = _default.Substring(1, 3).ToString();
+
+                    // we must extract the reference col id
+                    int _colId = 0;
+
+                    if (!int.TryParse(_default.Substring(5).Replace("]", ""), out _colId))
+                    {
+                        sendToConsole(ConsoleColor.Red, String.Format(@"Unable to extract dependent column id for special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                        continue;
+                    }
+
+                    switch (_cmd.ToUpper())
+                    {
+                        case "ASN":
+                            // this means we must reference and "assign" or match a value with the same dependent value each time
+
+                            // safety checks first
+                            // is the reference outside the bounds of the array
+                            if (_colId > (currentRow.Length - 1))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // is there a value in that referenced column
+                            if (currentRow[_colId] == null)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // we must have a select column (a value list) defined
+                            if (_csv.columns[i].selColumn == -1 && (_csv.columns[i].valueListFile == string.Empty || _csv.columns[i].valueListFile == ""))
+                            {
+                                // no value list set has been provided
+                                sendToConsole(ConsoleColor.Red, String.Format(@"A value list has not been provided for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // get length of value list to calculate the indexer
+                            Int64 _totalValues = selColumns[_csv.columns[i].selColumn].Length;
+
+                            // now we must get the referenced value
+                            Int64 _baseValue = 0;
+
+                            switch (_csv.columns[_colId].dataType)
+                            {
+                                case CsvFormatter.dataTypes.Integer:
+                                    _baseValue = Int64.Parse(currentRow[_colId].ToString());
+
+                                    break;
+
+                                case CsvFormatter.dataTypes.String:
+                                    char[] _chars = currentRow[_colId].ToString().ToCharArray();
+
+                                    for (int j = 0; j < _chars.Length; j++)
+                                    {
+                                        _baseValue += (int)_chars[j];
+                                    }
+
+                                    break;
+
+                                case CsvFormatter.dataTypes.Decimal:
+                                    _baseValue = (int)Decimal.Parse(currentRow[_colId].ToString());
+
+                                    break;
+
+                                default:
+
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The data type ({0}) of the reference column is not supported by the &ASN function for the special default in column '{1}'", _csv.columns[_colId].dataType.ToString(), _csv.columns[i].columnName.ToString()));
+                                    continue;
+
+                                    break;
+                            }
+
+                            // we have the value, now we must get the indexer
+                            Int64 _indexer = Math.Abs(_baseValue % _totalValues); 
+
+                            // now assign
+                            currentRow[i] = selColumns[_csv.columns[i].selColumn][_indexer];
+
+                            break;
+
+                        case "EQL":
+                            // this means assign the same number as the reference column
+
+                            // safety checks first
+                            // is the reference outside the bounds of the array
+                            if (_colId > (currentRow.Length -1))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // is there a value in that referenced column
+                            if (currentRow[_colId] == null)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // assign same value "EQL"
+                            currentRow[i] = currentRow[_colId];
+                            break;
+
+                        case "GTR":
+                            // this means we must have a greater value
+
+                            // safety checks first
+                            // is the reference outside the bounds of the array
+                            if (_colId > (currentRow.Length - 1))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // is there a value in that referenced column
+                            if (currentRow[_colId] == null)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // this number must be "greater" so we set the minimum here and validate this is a numeric type
+                            Int64 _newMin = 0;
+
+                            if (!Int64.TryParse(currentRow[_colId].ToString(), out _newMin))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is not a numeric type for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // now we must verify the new number is not larger than the current maxValue
+                            if (_newMin >= Int64.Parse(_csv.columns[i].maxValue))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column value is larger than the defined max value for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            currentRow[i] = getRandomIntegerAsString(_newMin, Int64.Parse(_csv.columns[i].maxValue));
+                            break;
+
+                        case "LSS":
+                            // this means we must have a lesser value
+
+                            // safety checks first
+                            // is the reference outside the bounds of the array
+                            if (_colId > (currentRow.Length - 1))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // is there a value in that referenced column
+                            if (currentRow[_colId] == null)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // this number must be "lesser" so we set the maximum here and validate this is a numeric type
+                            Int64 _newMax = 0;
+
+                            if (!Int64.TryParse(currentRow[_colId].ToString(), out _newMax))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is not a numeric type for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // now we must verify the new number is not smaller than the current minValue
+                            if (_newMax <= Int64.Parse(_csv.columns[i].minvalue))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column value is smaller than the defined min value for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            currentRow[i] = getRandomIntegerAsString(Int64.Parse(_csv.columns[i].minvalue), _newMax);
+                            break;
+
+                        default:
+
+                            sendToConsole(ConsoleColor.Red, String.Format(@"An unknown function was provided for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                            continue;
+
+                            break;
+                    }
+                }
+            }
+
             if (WAIT_FLAG)
             {
                 Thread.Sleep(WAIT_TIME);
@@ -2750,11 +3226,11 @@ namespace csvdatagen
                 try
                 {
                     // write to stream
-                    if (rowsCurrentlyWritten > 0 || (rowsCurrentlyWritten == 0 && _csv.printColumnNames))
-                    {
-                        sr.Write(ROW_TERMINATOR);
-                    }
                     sr.Write(sb.ToString());
+                    // terminate row
+                    sr.Write(ROW_TERMINATOR);
+
+                    // increment
                     rowsCurrentlyWritten++;
                     totalRowsWritten++;
                 }
@@ -2953,7 +3429,7 @@ namespace csvdatagen
             public bool monotonic { get; set; }
 
             [JsonProperty(PropertyName = "monotonicSeed")]
-            public int monotonicSeed { get; set; }
+            public Int64 monotonicSeed { get; set; }
 
             [JsonProperty(PropertyName = "monotonicStep")]
             public int monotonicStep { get; set; }
