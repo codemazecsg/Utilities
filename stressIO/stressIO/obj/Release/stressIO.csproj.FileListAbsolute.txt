@@ -1,0 +1,5 @@
+c:\scratch\stressIO\stressIO\bin\Release\stressIO.exe.config
+c:\scratch\stressIO\stressIO\bin\Release\stressIO.exe
+c:\scratch\stressIO\stressIO\bin\Release\stressIO.pdb
+c:\scratch\stressIO\stressIO\obj\Release\stressIO.exe
+c:\scratch\stressIO\stressIO\obj\Release\stressIO.pdb

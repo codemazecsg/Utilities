@@ -1,0 +1,6 @@
+c:\scratch\stressIO\stressIO\bin\Debug\stressIO.exe.config
+c:\scratch\stressIO\stressIO\bin\Debug\stressIO.exe
+c:\scratch\stressIO\stressIO\bin\Debug\stressIO.pdb
+c:\scratch\stressIO\stressIO\obj\Debug\stressIO.csprojResolveAssemblyReference.cache
+c:\scratch\stressIO\stressIO\obj\Debug\stressIO.exe
+c:\scratch\stressIO\stressIO\obj\Debug\stressIO.pdb
