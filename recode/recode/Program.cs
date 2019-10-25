@@ -9,7 +9,7 @@ namespace recode
 {
     class Program
     {
-        static Encoding encode = Encoding.UTF8;
+        static Encoding encode = new UTF8Encoding(false);
 
         static void Main(string[] args)
         {
@@ -42,7 +42,7 @@ namespace recode
 
             foreach (string f in Directory.EnumerateFiles(_sourcePath))
             {
-                string outputFile = String.Format(@"{0}\{1}", _destinationPath, f.Substring(f.LastIndexOf('\\')));
+                string outputFile = String.Format(@"{0}{1}", _destinationPath, f.Substring(f.LastIndexOf('\\')));
 
                 Console.WriteLine(String.Format(@"{0} ==> {1}", f.ToString(), outputFile.ToString()));
 

@@ -12,3 +12,10 @@ C:\Users\jamesask\Documents\GitHub\HPC-Code\recode\recode\obj\Debug\recode.cspro
 C:\Users\jamesask\Documents\GitHub\HPC-Code\recode\recode\obj\Debug\recode.csproj.CoreCompileInputs.cache
 C:\Users\jamesask\Documents\GitHub\HPC-Code\recode\recode\obj\Debug\recode.exe
 C:\Users\jamesask\Documents\GitHub\HPC-Code\recode\recode\obj\Debug\recode.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\recode\recode\bin\Debug\recode.exe.config
+C:\Users\jamesask\Documents\GitHub\Utilities\recode\recode\bin\Debug\recode.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\recode\recode\bin\Debug\recode.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\recode\recode\obj\Debug\recode.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\recode\recode\obj\Debug\recode.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\recode\recode\obj\Debug\recode.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\recode\recode\obj\Debug\recode.pdb

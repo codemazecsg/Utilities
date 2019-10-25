@@ -36,6 +36,7 @@ namespace csvdatagen
     #  v1.0.0.16    -  06/20/2019   Added special default functions (&ASN, &EQL, &GTR, &LSS) and fixed bug not writing a row terminator at the end of a file
     #  v1.0.0.17    -  07/05/2019   Added new special default &PRO to control the proportional mixture of values taken from more than one value list to set up ratios of values in a table
     #  v1.0.0.18    -  08/03/2019   Fixed bug in new PRO cmd that was causing a failure when evaluation default values < 4 bytes in length (invalid index reference into string)
+    #  v1.0.0.19    -  10/25/2019   Fixed bug in encoding files to UTF-8 and others - default changed to UTF-8
     #
     #
     */
@@ -66,7 +67,7 @@ namespace csvdatagen
         static string inputFormatFile = string.Empty;
         static string outputDirectory = string.Empty;
         static string outputFileNameConvention = string.Empty;
-        static Encoding encode = Encoding.Unicode;                  // default UTF-16
+        static Encoding encode = new UTF8Encoding(false);                    // default UTF-16
 
         // model ref
         static CsvFormatter _csv;
@@ -1628,15 +1629,16 @@ namespace csvdatagen
 
                         if (_e == 8)
                         {
-                            encode = Encoding.UTF8;
+                            encode = new UTF8Encoding(false);
                         }
                         else if (_e == 32)
                         {
-                            encode = Encoding.UTF32;
+                            // encode = Encoding.UTF32;
+                            encode = new UTF32Encoding(false, false);
                         }
                         else
                         {
-                            encode = Encoding.Unicode;
+                            encode = new UnicodeEncoding(false, false);
                         }
 
                         break;
@@ -1718,7 +1720,7 @@ namespace csvdatagen
             help.Append(Environment.NewLine);
             help.Append("/A              Use ASCII encoding (default is Unicode UTF-16).");
             help.Append(Environment.NewLine);
-            help.Append("/U              Use UTF-8 (/U8), UTF-16 (/U16), or UTF-32 (/U32) encoding (default is Unicode UTF-16).");
+            help.Append("/U              Use UTF-8 (/U8), UTF-16 (/U16), or UTF-32 (/U32) encoding (default is Unicode UTF-8).");
             help.Append(Environment.NewLine);
             help.Append("/L              Use lower case for random strings.");
             help.Append(Environment.NewLine);

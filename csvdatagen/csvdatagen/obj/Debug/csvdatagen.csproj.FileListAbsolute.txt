@@ -15,3 +15,13 @@ C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Debug\csvd
 C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Debug\csvdatagen.csproj.CoreCompileInputs.cache
 C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Debug\csvdatagen.exe
 C:\Users\jamesask\Documents\GitHub\HPC-Code\csvdatagen\csvdatagen\obj\Debug\csvdatagen.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Debug\csvdatagen.exe.config
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Debug\csvdatagen.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Debug\csvdatagen.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Debug\Newtonsoft.Json.dll
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Debug\Newtonsoft.Json.xml
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.csproj.CopyComplete
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.pdb
