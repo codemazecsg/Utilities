@@ -37,6 +37,7 @@ namespace csvdatagen
     #  v1.0.0.17    -  07/05/2019   Added new special default &PRO to control the proportional mixture of values taken from more than one value list to set up ratios of values in a table
     #  v1.0.0.18    -  08/03/2019   Fixed bug in new PRO cmd that was causing a failure when evaluation default values < 4 bytes in length (invalid index reference into string)
     #  v1.0.0.19    -  10/25/2019   Fixed bug in encoding files to UTF-8 and others - default changed to UTF-8
+    #  v1.0.0.20    -  10/25/2019   Fixed help documentation errors
     #
     #
     */
@@ -67,7 +68,7 @@ namespace csvdatagen
         static string inputFormatFile = string.Empty;
         static string outputDirectory = string.Empty;
         static string outputFileNameConvention = string.Empty;
-        static Encoding encode = new UTF8Encoding(false);                    // default UTF-16
+        static Encoding encode = new UTF8Encoding(false);                    // default UTF-8
 
         // model ref
         static CsvFormatter _csv;
@@ -1610,15 +1611,15 @@ namespace csvdatagen
                         break;
 
                     case "A":
-                        // change to ASCII encoding
-                        encode = UnicodeEncoding.ASCII;
+                        // use ASCII encoding
+                        encode = new ASCIIEncoding();
 
                         break;
 
                     case "U":
                         // change to UTF-8, 16, or 32 encoding
                         string _encode = args[i].Substring(2);
-                        int _e = 16;
+                        int _e = 8;
 
                         // assign to var
                         if (!int.TryParse(_encode.ToString(), out _e))
@@ -1627,18 +1628,17 @@ namespace csvdatagen
                             return false;
                         }
 
-                        if (_e == 8)
+                        if (_e == 16)
                         {
-                            encode = new UTF8Encoding(false);
+                            encode = new UnicodeEncoding(false, false);
                         }
                         else if (_e == 32)
                         {
-                            // encode = Encoding.UTF32;
                             encode = new UTF32Encoding(false, false);
                         }
                         else
                         {
-                            encode = new UnicodeEncoding(false, false);
+                            encode = new UTF8Encoding(false);
                         }
 
                         break;
@@ -1718,7 +1718,7 @@ namespace csvdatagen
             help.Append(Environment.NewLine);
             help.Append("/V              Relax selectivity requirement - selectivity will be on a best effort basis.");
             help.Append(Environment.NewLine);
-            help.Append("/A              Use ASCII encoding (default is Unicode UTF-16).");
+            help.Append("/A              Use ASCII encoding (default is Unicode UTF-8).");
             help.Append(Environment.NewLine);
             help.Append("/U              Use UTF-8 (/U8), UTF-16 (/U16), or UTF-32 (/U32) encoding (default is Unicode UTF-8).");
             help.Append(Environment.NewLine);
