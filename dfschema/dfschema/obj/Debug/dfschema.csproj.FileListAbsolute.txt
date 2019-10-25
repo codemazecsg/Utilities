@@ -1,0 +1,10 @@
+C:\scratch\dfschema\dfschema\bin\Debug\dfschema.exe.config
+C:\scratch\dfschema\dfschema\bin\Debug\dfschema.exe
+C:\scratch\dfschema\dfschema\bin\Debug\dfschema.pdb
+C:\scratch\dfschema\dfschema\obj\Debug\dfschema.csprojAssemblyReference.cache
+C:\scratch\dfschema\dfschema\obj\Debug\dfschema.Form1.resources
+C:\scratch\dfschema\dfschema\obj\Debug\dfschema.Properties.Resources.resources
+C:\scratch\dfschema\dfschema\obj\Debug\dfschema.csproj.GenerateResource.cache
+C:\scratch\dfschema\dfschema\obj\Debug\dfschema.csproj.CoreCompileInputs.cache
+C:\scratch\dfschema\dfschema\obj\Debug\dfschema.exe
+C:\scratch\dfschema\dfschema\obj\Debug\dfschema.pdb
