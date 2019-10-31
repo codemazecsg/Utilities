@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Data.SqlClient;
 using System.Reflection;
@@ -19,6 +20,7 @@ namespace csvtemplater
     #
     #  v1.0.0.1     -  05/28/2019   Base Version
     #  v1.0.0.2     -  05/28/2019   Added code for numeric and bit data types
+    #  v1.0.0.3     -  10/31/2019   fixed bug in string formatting
     #
     #
     */
@@ -228,7 +230,7 @@ namespace csvtemplater
 
                         if (scale < 1 || scale > 8)
                         {
-                            sendToConsole(ConsoleColor.Yellow, string.Format(@"Scale for column '{0}' not supported.  Defaulting to a scale of 2."));
+                            sendToConsole(ConsoleColor.Yellow, string.Format(@"Scale for column '{0}' not supported.  Defaulting to a scale of 2.", col.columnName));
                             col.minvalue = "1";
                             col.maxValue = int.MaxValue.ToString();
                             col.mantissa = 2;
@@ -443,17 +445,17 @@ namespace csvtemplater
             help.Append(Environment.NewLine);
             help.Append("/Y              Trusted connection.");
             help.Append(Environment.NewLine);
-            help.Append("/O:             Output filename for template file. [REQUIRED]");
+            help.Append("/O              Output filename for template file. [REQUIRED]");
             help.Append(Environment.NewLine);
-            help.Append("/T:             Table name to inspect. [REQUIRED]");
+            help.Append("/T              Table name to inspect. [REQUIRED]");
             help.Append(Environment.NewLine);
-            help.Append("/K:             Print row headers at the start of each file.");
+            help.Append("/K              Print row headers at the start of each file.");
             help.Append(Environment.NewLine);
-            help.Append("/R:             Number of rows.");
+            help.Append("/R              Number of rows.");
             help.Append(Environment.NewLine);
-            help.Append("/F:             Number of files.");
+            help.Append("/F              Number of files.");
             help.Append(Environment.NewLine);
-            help.Append("/X:             Append '_new' tag to the end of the filename.");
+            help.Append("/X              Append '_new' tag to the end of the filename.");
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
 
