@@ -63,6 +63,8 @@
             this.chkIncludeSaveAsTable = new System.Windows.Forms.CheckBox();
             this.lblDatabase = new System.Windows.Forms.Label();
             this.txtDatabaseSave = new System.Windows.Forms.TextBox();
+            this.lblNullValue = new System.Windows.Forms.Label();
+            this.txtNullValues = new System.Windows.Forms.TextBox();
             this.grpLogon.SuspendLayout();
             this.grpTables.SuspendLayout();
             this.grpOptions.SuspendLayout();
@@ -92,7 +94,7 @@
             this.lblUserName.AutoSize = true;
             this.lblUserName.Location = new System.Drawing.Point(264, 18);
             this.lblUserName.Name = "lblUserName";
-            this.lblUserName.Size = new System.Drawing.Size(81, 21);
+            this.lblUserName.Size = new System.Drawing.Size(58, 13);
             this.lblUserName.TabIndex = 8;
             this.lblUserName.Text = "Username";
             // 
@@ -101,7 +103,7 @@
             this.txtUserName.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtUserName.Location = new System.Drawing.Point(267, 34);
             this.txtUserName.Name = "txtUserName";
-            this.txtUserName.Size = new System.Drawing.Size(157, 29);
+            this.txtUserName.Size = new System.Drawing.Size(157, 22);
             this.txtUserName.TabIndex = 1;
             // 
             // btnLogon
@@ -120,7 +122,7 @@
             this.lblDatabaseName.AutoSize = true;
             this.lblDatabaseName.Location = new System.Drawing.Point(644, 18);
             this.lblDatabaseName.Name = "lblDatabaseName";
-            this.lblDatabaseName.Size = new System.Drawing.Size(120, 21);
+            this.lblDatabaseName.Size = new System.Drawing.Size(87, 13);
             this.lblDatabaseName.TabIndex = 5;
             this.lblDatabaseName.Text = "Database Name";
             // 
@@ -129,7 +131,7 @@
             this.txtDatabaseName.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtDatabaseName.Location = new System.Drawing.Point(647, 34);
             this.txtDatabaseName.Name = "txtDatabaseName";
-            this.txtDatabaseName.Size = new System.Drawing.Size(216, 29);
+            this.txtDatabaseName.Size = new System.Drawing.Size(216, 22);
             this.txtDatabaseName.TabIndex = 3;
             // 
             // lblPassword
@@ -137,7 +139,7 @@
             this.lblPassword.AutoSize = true;
             this.lblPassword.Location = new System.Drawing.Point(439, 18);
             this.lblPassword.Name = "lblPassword";
-            this.lblPassword.Size = new System.Drawing.Size(76, 21);
+            this.lblPassword.Size = new System.Drawing.Size(56, 13);
             this.lblPassword.TabIndex = 3;
             this.lblPassword.Text = "Password";
             // 
@@ -147,7 +149,7 @@
             this.txtPassword.Location = new System.Drawing.Point(442, 34);
             this.txtPassword.Name = "txtPassword";
             this.txtPassword.PasswordChar = '*';
-            this.txtPassword.Size = new System.Drawing.Size(180, 29);
+            this.txtPassword.Size = new System.Drawing.Size(180, 22);
             this.txtPassword.TabIndex = 2;
             // 
             // lblServername
@@ -155,7 +157,7 @@
             this.lblServername.AutoSize = true;
             this.lblServername.Location = new System.Drawing.Point(17, 18);
             this.lblServername.Name = "lblServername";
-            this.lblServername.Size = new System.Drawing.Size(94, 21);
+            this.lblServername.Size = new System.Drawing.Size(66, 13);
             this.lblServername.TabIndex = 1;
             this.lblServername.Text = "Servername";
             // 
@@ -165,7 +167,7 @@
             this.txtServerName.Cursor = System.Windows.Forms.Cursors.IBeam;
             this.txtServerName.Location = new System.Drawing.Point(20, 34);
             this.txtServerName.Name = "txtServerName";
-            this.txtServerName.Size = new System.Drawing.Size(232, 29);
+            this.txtServerName.Size = new System.Drawing.Size(232, 22);
             this.txtServerName.TabIndex = 0;
             // 
             // grpTables
@@ -221,12 +223,14 @@
             // 
             this.txtFilter.Location = new System.Drawing.Point(6, 23);
             this.txtFilter.Name = "txtFilter";
-            this.txtFilter.Size = new System.Drawing.Size(725, 29);
+            this.txtFilter.Size = new System.Drawing.Size(725, 22);
             this.txtFilter.TabIndex = 3;
             this.txtFilter.TextChanged += new System.EventHandler(this.TxtFilter_TextChanged);
             // 
             // grpOptions
             // 
+            this.grpOptions.Controls.Add(this.txtNullValues);
+            this.grpOptions.Controls.Add(this.lblNullValue);
             this.grpOptions.Controls.Add(this.txtSeparator);
             this.grpOptions.Controls.Add(this.lblSeparator);
             this.grpOptions.Controls.Add(this.txtDateFormat);
@@ -248,7 +252,7 @@
             this.txtSeparator.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtSeparator.Location = new System.Drawing.Point(423, 45);
             this.txtSeparator.Name = "txtSeparator";
-            this.txtSeparator.Size = new System.Drawing.Size(50, 29);
+            this.txtSeparator.Size = new System.Drawing.Size(50, 22);
             this.txtSeparator.TabIndex = 6;
             this.txtSeparator.Text = ",";
             // 
@@ -257,7 +261,7 @@
             this.lblSeparator.AutoSize = true;
             this.lblSeparator.Location = new System.Drawing.Point(357, 50);
             this.lblSeparator.Name = "lblSeparator";
-            this.lblSeparator.Size = new System.Drawing.Size(81, 21);
+            this.lblSeparator.Size = new System.Drawing.Size(60, 13);
             this.lblSeparator.TabIndex = 5;
             this.lblSeparator.Text = "Separator:";
             // 
@@ -266,7 +270,7 @@
             this.txtDateFormat.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtDateFormat.Location = new System.Drawing.Point(235, 46);
             this.txtDateFormat.Name = "txtDateFormat";
-            this.txtDateFormat.Size = new System.Drawing.Size(100, 29);
+            this.txtDateFormat.Size = new System.Drawing.Size(100, 22);
             this.txtDateFormat.TabIndex = 4;
             this.txtDateFormat.Text = "MM/dd/yyyy";
             // 
@@ -275,7 +279,7 @@
             this.lblDateFormat.AutoSize = true;
             this.lblDateFormat.Location = new System.Drawing.Point(159, 50);
             this.lblDateFormat.Name = "lblDateFormat";
-            this.lblDateFormat.Size = new System.Drawing.Size(95, 21);
+            this.lblDateFormat.Size = new System.Drawing.Size(70, 13);
             this.lblDateFormat.TabIndex = 3;
             this.lblDateFormat.Text = "DateFormat:";
             // 
@@ -284,7 +288,7 @@
             this.chkHeader.AutoSize = true;
             this.chkHeader.Location = new System.Drawing.Point(71, 49);
             this.chkHeader.Name = "chkHeader";
-            this.chkHeader.Size = new System.Drawing.Size(86, 25);
+            this.chkHeader.Size = new System.Drawing.Size(63, 17);
             this.chkHeader.TabIndex = 2;
             this.chkHeader.Text = "Header";
             this.chkHeader.UseVisualStyleBackColor = true;
@@ -294,7 +298,7 @@
             this.lblFilePath.AutoSize = true;
             this.lblFilePath.Location = new System.Drawing.Point(11, 20);
             this.lblFilePath.Name = "lblFilePath";
-            this.lblFilePath.Size = new System.Drawing.Size(71, 21);
+            this.lblFilePath.Size = new System.Drawing.Size(54, 13);
             this.lblFilePath.TabIndex = 1;
             this.lblFilePath.Text = "File Path:";
             // 
@@ -303,7 +307,7 @@
             this.txtFilePath.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtFilePath.Location = new System.Drawing.Point(71, 18);
             this.txtFilePath.Name = "txtFilePath";
-            this.txtFilePath.Size = new System.Drawing.Size(904, 29);
+            this.txtFilePath.Size = new System.Drawing.Size(904, 22);
             this.txtFilePath.TabIndex = 0;
             // 
             // grpImports
@@ -345,7 +349,7 @@
             this.txtImport.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtImport.Location = new System.Drawing.Point(13, 85);
             this.txtImport.Name = "txtImport";
-            this.txtImport.Size = new System.Drawing.Size(756, 29);
+            this.txtImport.Size = new System.Drawing.Size(756, 22);
             this.txtImport.TabIndex = 1;
             this.txtImport.TextChanged += new System.EventHandler(this.TxtImport_TextChanged);
             // 
@@ -353,10 +357,9 @@
             // 
             this.lsbImports.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.lsbImports.FormattingEnabled = true;
-            this.lsbImports.ItemHeight = 21;
             this.lsbImports.Location = new System.Drawing.Point(13, 22);
             this.lsbImports.Name = "lsbImports";
-            this.lsbImports.Size = new System.Drawing.Size(857, 44);
+            this.lsbImports.Size = new System.Drawing.Size(857, 41);
             this.lsbImports.TabIndex = 0;
             this.lsbImports.SelectedIndexChanged += new System.EventHandler(this.LsbImports_SelectedIndexChanged);
             // 
@@ -406,7 +409,7 @@
             this.chkIncludeSaveAsTable.AutoSize = true;
             this.chkIncludeSaveAsTable.Location = new System.Drawing.Point(13, 582);
             this.chkIncludeSaveAsTable.Name = "chkIncludeSaveAsTable";
-            this.chkIncludeSaveAsTable.Size = new System.Drawing.Size(173, 25);
+            this.chkIncludeSaveAsTable.Size = new System.Drawing.Size(128, 17);
             this.chkIncludeSaveAsTable.TabIndex = 3;
             this.chkIncludeSaveAsTable.Text = "Include saveAsTable";
             this.chkIncludeSaveAsTable.UseVisualStyleBackColor = true;
@@ -416,7 +419,7 @@
             this.lblDatabase.AutoSize = true;
             this.lblDatabase.Location = new System.Drawing.Point(157, 583);
             this.lblDatabase.Name = "lblDatabase";
-            this.lblDatabase.Size = new System.Drawing.Size(81, 21);
+            this.lblDatabase.Size = new System.Drawing.Size(61, 13);
             this.lblDatabase.TabIndex = 4;
             this.lblDatabase.Text = "Database: ";
             // 
@@ -424,12 +427,29 @@
             // 
             this.txtDatabaseSave.Location = new System.Drawing.Point(224, 580);
             this.txtDatabaseSave.Name = "txtDatabaseSave";
-            this.txtDatabaseSave.Size = new System.Drawing.Size(180, 29);
+            this.txtDatabaseSave.Size = new System.Drawing.Size(180, 22);
             this.txtDatabaseSave.TabIndex = 5;
+            // 
+            // lblNullValue
+            // 
+            this.lblNullValue.AutoSize = true;
+            this.lblNullValue.Location = new System.Drawing.Point(506, 50);
+            this.lblNullValue.Name = "lblNullValue";
+            this.lblNullValue.Size = new System.Drawing.Size(60, 13);
+            this.lblNullValue.TabIndex = 6;
+            this.lblNullValue.Text = "null value:";
+            // 
+            // txtNullValues
+            // 
+            this.txtNullValues.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtNullValues.Location = new System.Drawing.Point(572, 45);
+            this.txtNullValues.Name = "txtNullValues";
+            this.txtNullValues.Size = new System.Drawing.Size(100, 22);
+            this.txtNullValues.TabIndex = 6;
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 21F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.ClientSize = new System.Drawing.Size(1024, 617);
@@ -494,6 +514,8 @@
         private System.Windows.Forms.TextBox txtFilter;
         private System.Windows.Forms.Button btnReset;
         private System.Windows.Forms.Button btnRemove;
+        private System.Windows.Forms.TextBox txtNullValues;
+        private System.Windows.Forms.Label lblNullValue;
     }
 }
 

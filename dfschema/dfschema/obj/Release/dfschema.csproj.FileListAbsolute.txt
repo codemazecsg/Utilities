@@ -8,3 +8,13 @@ C:\scratch\dfschema\dfschema\obj\Release\dfschema.csproj.CoreCompileInputs.cache
 C:\scratch\dfschema\dfschema\obj\Release\dfschema.exe
 C:\scratch\dfschema\dfschema\obj\Release\dfschema.pdb
 C:\scratch\dfschema\dfschema\obj\Release\dfschema.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\bin\Release\dfschema.exe.config
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\bin\Release\dfschema.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\bin\Release\dfschema.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\obj\Release\dfschema.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\obj\Release\dfschema.Form1.resources
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\obj\Release\dfschema.Properties.Resources.resources
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\obj\Release\dfschema.csproj.GenerateResource.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\obj\Release\dfschema.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\obj\Release\dfschema.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\dfschema\dfschema\obj\Release\dfschema.pdb

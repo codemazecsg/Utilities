@@ -189,6 +189,8 @@ namespace dfschema
             string sqlString = String.Format(@"select
 	                                                c.name,
 	                                                x.name,
+                                                    c.precision,
+                                                    c.scale,
 	                                                c.system_type_id
                                                from sys.columns c 
 	                                                inner join sys.tables t
@@ -235,6 +237,8 @@ namespace dfschema
                     cols.Append(", ");
 
                     string dType = dr[1].ToString();
+                    string dPrecision = dr[2].ToString();
+                    string dScale = dr[3].ToString();
                     string dTag = "!!!UNKNOWN!!!";
 
                     switch (dType)
@@ -276,13 +280,13 @@ namespace dfschema
                             dTag = "BooleanType()";
                             break;
                         case "decimal":
-                            dTag = "DecimalType()";
+                            dTag = String.Format(@"DecimalType({0},{1})", dPrecision.ToString(), dScale.ToString());
                             break;
                         case "numeric":
-                            dTag = "DecimalType()";
+                            dTag = String.Format(@"DecimalType({0},{1})", dPrecision.ToString(), dScale.ToString());
                             break;
                         case "smallmoney":
-                            dTag = "DecimalType()";
+                            dTag = String.Format(@"DecimalType({0},{1})", dPrecision.ToString(), dScale.ToString());
                             break;
                         case "bigint":
                             dTag = "LongType()";
@@ -375,6 +379,15 @@ namespace dfschema
                     body.Append("dateFormat=");
                     body.Append("\"");
                     body.Append(txtDateFormat.Text);
+                    body.Append("\"");
+                    body.Append(", ");
+                }
+
+                if (txtNullValues.Text.Length > 0)
+                {
+                    body.Append("nullValue=");
+                    body.Append("\"");
+                    body.Append(txtNullValues.Text);
                     body.Append("\"");
                     body.Append(", ");
                 }
