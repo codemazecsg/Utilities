@@ -1,0 +1,8 @@
+C:\scratch\schedview\schedview\bin\Debug\schedview.exe.config
+C:\scratch\schedview\schedview\bin\Debug\schedview.exe
+C:\scratch\schedview\schedview\bin\Debug\schedview.pdb
+C:\scratch\schedview\schedview\obj\Debug\schedview.csprojAssemblyReference.cache
+C:\scratch\schedview\schedview\obj\Debug\schedview.csproj.ResolveComReference.cache
+C:\scratch\schedview\schedview\obj\Debug\schedview.csproj.CoreCompileInputs.cache
+C:\scratch\schedview\schedview\obj\Debug\schedview.exe
+C:\scratch\schedview\schedview\obj\Debug\schedview.pdb
