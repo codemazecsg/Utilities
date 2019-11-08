@@ -168,6 +168,7 @@ namespace dfschema
                 grpOptions.Enabled = true;
                 btnBuild.Enabled = true;
                 btnRemove.Enabled = true;
+                chkIncludeSaveAsTable.Enabled = true;
             }
             else
             {
@@ -175,6 +176,7 @@ namespace dfschema
                 grpOptions.Enabled = false;
                 btnBuild.Enabled = false;
                 btnRemove.Enabled = false;
+                chkIncludeSaveAsTable.Enabled = false;
             }
         }
 
@@ -406,20 +408,57 @@ namespace dfschema
 
             if (chkIncludeSaveAsTable.Checked)
             {
-                body.Append(Environment.NewLine);
-                body.Append("df.write.saveAsTable(");
-                body.Append("\"");
-
-                if (txtDatabaseSave.Text.Length > 0)
+                if (chkDeltaTable.Checked)
                 {
-                    body.Append(txtDatabaseSave.Text);
-                    body.Append(".");
+                    body.Append(Environment.NewLine);
+                    body.Append("df.write.format(");
+                    body.Append("\"");
+                    body.Append("delta");
+                    body.Append("\")");
+                    body.Append(".save(");
+                    body.Append("\"");
+                    body.Append(txtDeltaTablePath.Text);
+                    body.Append("\"");
+                    body.Append(")");
+
+                    body.Append(Environment.NewLine);
+                    body.Append("spark.sql(\"");
+                    body.Append("create table ");
+
+                    if (txtDatabaseSave.Text.Length > 0)
+                    {
+                        body.Append(txtDatabaseSave.Text);
+                        body.Append(".");
+                    }
+
+                    body.Append(lsvTables.SelectedItems[0].SubItems[1].Text);
+                    body.Append(" ");
+                    body.Append("using delta location '");
+                    body.Append(txtDeltaTablePath.Text);
+                    body.Append("'\")");
+                    body.Append(Environment.NewLine);
+
+                }
+                else
+                {
+                    body.Append(Environment.NewLine);
+                    body.Append("df.write.saveAsTable(");
+                    body.Append("\"");
+
+                    if (txtDatabaseSave.Text.Length > 0)
+                    {
+                        body.Append(txtDatabaseSave.Text);
+                        body.Append(".");
+                    }
+
+                    body.Append(lsvTables.SelectedItems[0].SubItems[1].Text);
+                    body.Append("\"");
+                    body.Append(")");
+                    body.Append(Environment.NewLine);
                 }
 
-                body.Append(lsvTables.SelectedItems[0].SubItems[1].Text);
-                body.Append("\"");
-                body.Append(")");
-                body.Append(Environment.NewLine);
+
+
             }
 
             // write out file
@@ -494,6 +533,26 @@ namespace dfschema
         private void BtnRemove_Click(object sender, EventArgs e)
         {
             lsvTables.SelectedItems[0].Remove();
+        }
+
+        private void ChkIncludeSaveAsTable_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkIncludeSaveAsTable.Checked)
+            {
+                chkDeltaTable.Enabled = true;
+                lblDeltaName.Enabled = true;
+                txtDeltaTablePath.Enabled = true;
+                txtDatabaseSave.Enabled = true;
+                lblDatabase.Enabled = true;
+            }
+            else
+            {
+                txtDatabaseSave.Enabled = false;
+                lblDatabase.Enabled = false;
+                chkDeltaTable.Enabled = false;
+                lblDeltaName.Enabled = false;
+                txtDeltaTablePath.Enabled = false;
+            }
         }
     }
 }

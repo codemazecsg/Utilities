@@ -44,6 +44,8 @@
             this.btnFilter = new System.Windows.Forms.Button();
             this.txtFilter = new System.Windows.Forms.TextBox();
             this.grpOptions = new System.Windows.Forms.GroupBox();
+            this.txtNullValues = new System.Windows.Forms.TextBox();
+            this.lblNullValue = new System.Windows.Forms.Label();
             this.txtSeparator = new System.Windows.Forms.TextBox();
             this.lblSeparator = new System.Windows.Forms.Label();
             this.txtDateFormat = new System.Windows.Forms.TextBox();
@@ -63,8 +65,9 @@
             this.chkIncludeSaveAsTable = new System.Windows.Forms.CheckBox();
             this.lblDatabase = new System.Windows.Forms.Label();
             this.txtDatabaseSave = new System.Windows.Forms.TextBox();
-            this.lblNullValue = new System.Windows.Forms.Label();
-            this.txtNullValues = new System.Windows.Forms.TextBox();
+            this.chkDeltaTable = new System.Windows.Forms.CheckBox();
+            this.txtDeltaTablePath = new System.Windows.Forms.TextBox();
+            this.lblDeltaName = new System.Windows.Forms.Label();
             this.grpLogon.SuspendLayout();
             this.grpTables.SuspendLayout();
             this.grpOptions.SuspendLayout();
@@ -247,6 +250,23 @@
             this.grpOptions.TabStop = false;
             this.grpOptions.Text = "Options";
             // 
+            // txtNullValues
+            // 
+            this.txtNullValues.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtNullValues.Location = new System.Drawing.Point(572, 45);
+            this.txtNullValues.Name = "txtNullValues";
+            this.txtNullValues.Size = new System.Drawing.Size(100, 22);
+            this.txtNullValues.TabIndex = 6;
+            // 
+            // lblNullValue
+            // 
+            this.lblNullValue.AutoSize = true;
+            this.lblNullValue.Location = new System.Drawing.Point(506, 50);
+            this.lblNullValue.Name = "lblNullValue";
+            this.lblNullValue.Size = new System.Drawing.Size(60, 13);
+            this.lblNullValue.TabIndex = 6;
+            this.lblNullValue.Text = "null value:";
+            // 
             // txtSeparator
             // 
             this.txtSeparator.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -396,7 +416,7 @@
             // btnBuild
             // 
             this.btnBuild.Enabled = false;
-            this.btnBuild.Location = new System.Drawing.Point(933, 582);
+            this.btnBuild.Location = new System.Drawing.Point(933, 578);
             this.btnBuild.Name = "btnBuild";
             this.btnBuild.Size = new System.Drawing.Size(75, 23);
             this.btnBuild.TabIndex = 2;
@@ -407,16 +427,19 @@
             // chkIncludeSaveAsTable
             // 
             this.chkIncludeSaveAsTable.AutoSize = true;
+            this.chkIncludeSaveAsTable.Enabled = false;
             this.chkIncludeSaveAsTable.Location = new System.Drawing.Point(13, 582);
             this.chkIncludeSaveAsTable.Name = "chkIncludeSaveAsTable";
             this.chkIncludeSaveAsTable.Size = new System.Drawing.Size(128, 17);
             this.chkIncludeSaveAsTable.TabIndex = 3;
             this.chkIncludeSaveAsTable.Text = "Include saveAsTable";
             this.chkIncludeSaveAsTable.UseVisualStyleBackColor = true;
+            this.chkIncludeSaveAsTable.CheckedChanged += new System.EventHandler(this.ChkIncludeSaveAsTable_CheckedChanged);
             // 
             // lblDatabase
             // 
             this.lblDatabase.AutoSize = true;
+            this.lblDatabase.Enabled = false;
             this.lblDatabase.Location = new System.Drawing.Point(157, 583);
             this.lblDatabase.Name = "lblDatabase";
             this.lblDatabase.Size = new System.Drawing.Size(61, 13);
@@ -425,27 +448,41 @@
             // 
             // txtDatabaseSave
             // 
+            this.txtDatabaseSave.Enabled = false;
             this.txtDatabaseSave.Location = new System.Drawing.Point(224, 580);
             this.txtDatabaseSave.Name = "txtDatabaseSave";
             this.txtDatabaseSave.Size = new System.Drawing.Size(180, 22);
             this.txtDatabaseSave.TabIndex = 5;
             // 
-            // lblNullValue
+            // chkDeltaTable
             // 
-            this.lblNullValue.AutoSize = true;
-            this.lblNullValue.Location = new System.Drawing.Point(506, 50);
-            this.lblNullValue.Name = "lblNullValue";
-            this.lblNullValue.Size = new System.Drawing.Size(60, 13);
-            this.lblNullValue.TabIndex = 6;
-            this.lblNullValue.Text = "null value:";
+            this.chkDeltaTable.AutoSize = true;
+            this.chkDeltaTable.Enabled = false;
+            this.chkDeltaTable.Location = new System.Drawing.Point(444, 582);
+            this.chkDeltaTable.Name = "chkDeltaTable";
+            this.chkDeltaTable.Size = new System.Drawing.Size(105, 17);
+            this.chkDeltaTable.TabIndex = 6;
+            this.chkDeltaTable.Text = "Use Delta Table";
+            this.chkDeltaTable.UseVisualStyleBackColor = true;
             // 
-            // txtNullValues
+            // txtDeltaTablePath
             // 
-            this.txtNullValues.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtNullValues.Location = new System.Drawing.Point(572, 45);
-            this.txtNullValues.Name = "txtNullValues";
-            this.txtNullValues.Size = new System.Drawing.Size(100, 22);
-            this.txtNullValues.TabIndex = 6;
+            this.txtDeltaTablePath.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtDeltaTablePath.Enabled = false;
+            this.txtDeltaTablePath.Location = new System.Drawing.Point(591, 580);
+            this.txtDeltaTablePath.Name = "txtDeltaTablePath";
+            this.txtDeltaTablePath.Size = new System.Drawing.Size(298, 22);
+            this.txtDeltaTablePath.TabIndex = 7;
+            // 
+            // lblDeltaName
+            // 
+            this.lblDeltaName.AutoSize = true;
+            this.lblDeltaName.Enabled = false;
+            this.lblDeltaName.Location = new System.Drawing.Point(542, 583);
+            this.lblDeltaName.Name = "lblDeltaName";
+            this.lblDeltaName.Size = new System.Drawing.Size(43, 13);
+            this.lblDeltaName.TabIndex = 8;
+            this.lblDeltaName.Text = "- Path: ";
             // 
             // Form1
             // 
@@ -453,6 +490,9 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.ClientSize = new System.Drawing.Size(1024, 617);
+            this.Controls.Add(this.lblDeltaName);
+            this.Controls.Add(this.txtDeltaTablePath);
+            this.Controls.Add(this.chkDeltaTable);
             this.Controls.Add(this.txtDatabaseSave);
             this.Controls.Add(this.lblDatabase);
             this.Controls.Add(this.chkIncludeSaveAsTable);
@@ -516,6 +556,9 @@
         private System.Windows.Forms.Button btnRemove;
         private System.Windows.Forms.TextBox txtNullValues;
         private System.Windows.Forms.Label lblNullValue;
+        private System.Windows.Forms.CheckBox chkDeltaTable;
+        private System.Windows.Forms.TextBox txtDeltaTablePath;
+        private System.Windows.Forms.Label lblDeltaName;
     }
 }
 
