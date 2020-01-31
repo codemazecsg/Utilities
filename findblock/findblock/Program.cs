@@ -24,6 +24,7 @@ namespace findblock
             int matchCount = 0;
             string fileName = String.Empty;
             string[] searchString = null;
+            int[] searchCount = null;
             string terminateString = String.Empty;
             string breakoutString = String.Empty;
             bool terminate = false;
@@ -32,6 +33,7 @@ namespace findblock
             bool colormatch = false;
             bool pointer = false;
             bool printFileName = false;
+            bool showStatistics = false;
             TextReader tr;
             ConsoleColor cHighlighter = ConsoleColor.Yellow;
 
@@ -108,7 +110,12 @@ namespace findblock
                 }
                 else if (args[i].ToLower().StartsWith("-s") || args[i].ToLower().StartsWith("/s"))
                 {
-                    searchString = args[i].Substring(2).Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+                    searchString = args[i].Substring(2).Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                    searchCount = new int[searchString.Length];
+
+                    // init array
+                    for (int j = 0; j < searchCount.Length; j++)
+                    { searchCount[j] = 0; }
                 }
                 else if (args[i].ToLower().StartsWith("-?") || args[i].ToLower().StartsWith("/?"))
                 {
@@ -148,6 +155,10 @@ namespace findblock
                 else if (args[i].ToLower().StartsWith("-e") || args[i].ToLower().StartsWith("/e"))
                 {
                     printFileName = true;
+                }
+                else if (args[i].ToLower().StartsWith("-m") || args[i].ToLower().StartsWith("/m"))
+                {
+                    showStatistics = true;
                 }
                 else
                 {
@@ -209,7 +220,7 @@ namespace findblock
                         lineQueue.Dequeue();
                     }
 
-                    if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
+                    if (showLineNumbers) { LineNumber = count.ToString("0000") + "  "; }
                     // now enqueue this item
                     lineQueue.Enqueue((string) LineNumber + line);
                 }
@@ -225,12 +236,17 @@ namespace findblock
                 }
 
                 // Does the line have a match?
-                foreach (string s in searchString)
+                for (int x = 0; x < searchString.Length; x++) 
                 {
+                    string s = searchString[x];
+
                     if (line.Contains(s) || (!case_sensitive && (line.ToLower().Contains(s.ToLower()))))
                     {
                         // increment match count
                         matchCount++;
+
+                        // increment specific term count
+                        searchCount[x]++;
 
                         if (printFileName && !showMatchCount)
                         {
@@ -300,7 +316,7 @@ namespace findblock
 
                                 if (!showMatchCount)
                                 {
-                                    if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
+                                    if (showLineNumbers) { LineNumber = count.ToString("0000") + "  "; }
                                     Console.Write(LineNumber + line.Substring(0, pos));
                                     Console.ForegroundColor = cHighlighter;
                                     Console.Write(line.Substring(pos, srchLength));
@@ -317,7 +333,7 @@ namespace findblock
 
                                 if (!showMatchCount)
                                 {
-                                    if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
+                                    if (showLineNumbers) { LineNumber = count.ToString("0000") + "  "; }
                                     Console.WriteLine(LineNumber + line.ToString());
                                 }
                             }
@@ -360,11 +376,14 @@ namespace findblock
 
                                 if (!showMatchCount)
                                 {
-                                    if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
+                                    if (showLineNumbers) { LineNumber = count.ToString("0000") + "  "; }
                                     Console.WriteLine(LineNumber + fline.ToString());
                                 }
                             }
                         }
+
+                        // add separating space
+                        Console.WriteLine();
                     }
                 }
 
@@ -382,6 +401,14 @@ namespace findblock
             // close file
             tr.Close();
 
+            if (showStatistics)
+            {
+                for (int w = 0; w < searchString.Length; w++)
+                {
+                    Console.WriteLine(String.Format(@"{0} : {1}", searchString[w].ToString(), searchCount[w].ToString("0000")));
+                }
+            }
+
         } // main
 
         // Display program help to console
@@ -390,17 +417,19 @@ namespace findblock
             Assembly assem = Assembly.GetExecutingAssembly();
             AssemblyName assemName = assem.GetName();
             Version ver = assemName.Version;
+            DateTime d = File.GetLastWriteTime(assem.Location);
 
             Console.WriteLine();
             Console.WriteLine("Written by Jay Askew (MSFT)");
             Console.WriteLine("Version: {0}", ver.ToString());
+            Console.WriteLine("Date: {0}", d.ToString());
             Console.WriteLine();
             Console.WriteLine("Usage: findblock -i<input file> -s<search string> [-b<number of lines to read back> -f<number of lines to read forward> -t<terminate string> -x -h -c -p -n]");
             Console.WriteLine();
             Console.WriteLine("\t -b \t Number of lines to return before (Read Back) the matching line. Limit is 12 lines.");
             Console.WriteLine("\t -f \t Number of lines to return after (Read Forward) the matching line.");
             Console.WriteLine("\t -i \t Input file to search - must be a text file.");
-            Console.WriteLine("\t -s \t String to search for.  The search string is case-sensitive by default without the -x parameter.");
+            Console.WriteLine("\t -s \t String to search for.  The search string is case-sensitive by default without the -x parameter.  Multiple search words (OR) may be separarted with a '|'");
             Console.WriteLine("\t -x \t Do case insensitive searching.");
             Console.WriteLine("\t -h \t Highlight match in search string.  This only highlights in the search string - not in the Read Back or Read Forward lines.");
             Console.WriteLine("\t -p \t Use a pointer to point to the matching lines (\"-->\").");
@@ -409,6 +438,7 @@ namespace findblock
             Console.WriteLine("\t -t \t Stops searching and exits once this provided \"terminate\" string is encountered.");
             Console.WriteLine("\t -k \t Stops outputting read forward lines once this \"break\" string is encountered and starts searching again from that point forward.");
             Console.WriteLine("\t -e \t Echos file name to console for lines containing a match.");
+            Console.WriteLine("\t -m \t Show statistics (counts) on what was found.");
             Console.WriteLine("\t -? \t This screen.");
             Console.WriteLine();
             Console.WriteLine("\t Note: if -b and -f are *NOT* provided, then only the matching line is returned.");
