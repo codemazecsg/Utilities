@@ -9,3 +9,8 @@ C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\find
 C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\bin\Debug\findblock.pdb
 C:\Users\jamesask\Documents\Visual Studio 2012\Projects\findblock\findblock\findblock\obj\x86\Debug\findblock.exe
 C:\Users\jamesask\Documents\Visual Studio 2012\Projects\findblock\findblock\findblock\obj\x86\Debug\findblock.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\bin\Debug\findblock.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\bin\Debug\findblock.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\obj\x86\Debug\findblock.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\obj\x86\Debug\findblock.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\obj\x86\Debug\findblock.pdb

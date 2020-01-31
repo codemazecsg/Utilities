@@ -23,7 +23,7 @@ namespace findblock
             bool showMatchCount = false;
             int matchCount = 0;
             string fileName = String.Empty;
-            string searchString = String.Empty;
+            string[] searchString = null;
             string terminateString = String.Empty;
             string breakoutString = String.Empty;
             bool terminate = false;
@@ -31,6 +31,7 @@ namespace findblock
             bool case_sensitive = true;
             bool colormatch = false;
             bool pointer = false;
+            bool printFileName = false;
             TextReader tr;
             ConsoleColor cHighlighter = ConsoleColor.Yellow;
 
@@ -107,7 +108,7 @@ namespace findblock
                 }
                 else if (args[i].ToLower().StartsWith("-s") || args[i].ToLower().StartsWith("/s"))
                 {
-                    searchString = args[i].Substring(2);
+                    searchString = args[i].Substring(2).Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
                 }
                 else if (args[i].ToLower().StartsWith("-?") || args[i].ToLower().StartsWith("/?"))
                 {
@@ -143,6 +144,10 @@ namespace findblock
                 {
                     breakout = true;
                     breakoutString = args[i].Substring(2);
+                }
+                else if (args[i].ToLower().StartsWith("-e") || args[i].ToLower().StartsWith("/e"))
+                {
+                    printFileName = true;
                 }
                 else
                 {
@@ -219,136 +224,145 @@ namespace findblock
                     }
                 }
 
-                // Did the line match?
-                if (line.Contains(searchString) || (!case_sensitive && (line.ToLower().Contains(searchString.ToLower()))))
+                // Does the line have a match?
+                foreach (string s in searchString)
                 {
-                    // increment match count
-                    matchCount++;
-
-                    // we have a match - return all queue if we are queueing
-                    if (ReadBack > 0)
+                    if (line.Contains(s) || (!case_sensitive && (line.ToLower().Contains(s.ToLower()))))
                     {
-                        // return all from queue
-                        while (lineQueue.Count > 0)
+                        // increment match count
+                        matchCount++;
+
+                        if (printFileName && !showMatchCount)
                         {
-                            // first grab the line
-                            string qline = (string)lineQueue.Dequeue();
+                            Console.WriteLine();
+                            Console.WriteLine(String.Format(@"=========>> {0}", fileName.ToString()));
+                        }
 
-                            if (lineQueue.Count == 0) // we are at the end of the Queue
+                        // we have a match - return all queue if we are queueing
+                        if (ReadBack > 0 && lineQueue.Count > 0)
+                        {
+                            // return all from queue
+                            while (lineQueue.Count > 0)
                             {
-                                if (colormatch)
+                                // first grab the line
+                                string qline = (string)lineQueue.Dequeue();
+
+                                if (lineQueue.Count == 0) // we are at the end of the Queue
                                 {
-                                    int pos = qline.ToLower().IndexOf(searchString.ToLower());
-                                    int srchLength = searchString.Length;
-
-                                    if (pointer)
+                                    if (colormatch)
                                     {
-                                        if (!showMatchCount) { Console.Write("--> "); }
+                                        int pos = qline.ToLower().IndexOf(s.ToLower());
+                                        int srchLength = s.Length;
+
+                                        if (pointer)
+                                        {
+                                            if (!showMatchCount) { Console.Write("--> "); }
+                                        }
+
+                                        if (!showMatchCount)
+                                        {
+                                            Console.Write(qline.Substring(0, pos));
+                                            Console.ForegroundColor = cHighlighter;
+                                            Console.Write(qline.Substring(pos, srchLength));
+                                            Console.ResetColor();
+                                            Console.WriteLine(qline.Substring(pos + srchLength));
+                                        }
                                     }
-
-                                    if (!showMatchCount)
+                                    else
                                     {
-                                        Console.Write(qline.Substring(0, pos));
-                                        Console.ForegroundColor = cHighlighter;
-                                        Console.Write(qline.Substring(pos, srchLength));
-                                        Console.ResetColor();
-                                        Console.WriteLine(qline.Substring(pos + srchLength));
+                                        if (pointer)
+                                        {
+                                            if (!showMatchCount) { Console.Write("--> "); }
+                                        }
+
+                                        if (!showMatchCount) { Console.WriteLine(qline.ToString()); }
                                     }
                                 }
                                 else
                                 {
-                                    if (pointer)
-                                    {
-                                        if (!showMatchCount) { Console.Write("--> "); } 
-                                    }
-
                                     if (!showMatchCount) { Console.WriteLine(qline.ToString()); }
+                                }
+                            } // queue while
+                        }
+                        else
+                        {
+                            // we are not queueing
+
+                            if (colormatch)
+                            {
+                                int pos = line.ToLower().IndexOf(s.ToLower());
+                                int srchLength = s.Length;
+
+                                if (pointer)
+                                {
+                                    if (!showMatchCount) { Console.Write("--> "); }
+                                }
+
+                                if (!showMatchCount)
+                                {
+                                    if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
+                                    Console.Write(LineNumber + line.Substring(0, pos));
+                                    Console.ForegroundColor = cHighlighter;
+                                    Console.Write(line.Substring(pos, srchLength));
+                                    Console.ResetColor();
+                                    Console.WriteLine(line.Substring(pos + srchLength));
                                 }
                             }
                             else
                             {
-                                if (!showMatchCount) { Console.WriteLine(qline.ToString()); }
-                            }
-                        } // queue while
-                    }
-                    else
-                    {
-                        // we are not queueing
-
-                        if (colormatch)
-                        {
-                            int pos = line.ToLower().IndexOf(searchString.ToLower());
-                            int srchLength = searchString.Length;
-
-                            if (pointer)
-                            {
-                                if (!showMatchCount) { Console.Write("--> "); }
-                            }
-
-                            if (!showMatchCount)
-                            {
-                                if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
-                                Console.Write(LineNumber + line.Substring(0, pos));
-                                Console.ForegroundColor = cHighlighter;
-                                Console.Write(line.Substring(pos, srchLength));
-                                Console.ResetColor();
-                                Console.WriteLine(line.Substring(pos + srchLength));
-                            }
-                        }
-                        else
-                        {
-                            if (pointer)
-                            {
-                                if (!showMatchCount) { Console.Write("--> "); }
-                            }
-
-                            if (!showMatchCount)
-                            {
-                                if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
-                                Console.WriteLine(LineNumber + line.ToString());
-                            }
-                        }
-
-                    }
-
-                    // are we reading forward?
-                    if (ReadForward > 0)
-                    {
-                        //advance the text reader and return all
-                        for (int i = 0; i < ReadForward; i++)
-                        {
-                            string fline = tr.ReadLine();
-                            count++;
-
-                            // check to see if we have reached a point to jump
-                            if (breakout)
-                            {
-                                if (fline.Contains(breakoutString) || (!case_sensitive && (fline.ToLower().Contains(breakoutString.ToLower()))))
+                                if (pointer)
                                 {
-                                    // jump out of this iteration
-                                    break;
+                                    if (!showMatchCount) { Console.Write("--> "); }
+                                }
+
+                                if (!showMatchCount)
+                                {
+                                    if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
+                                    Console.WriteLine(LineNumber + line.ToString());
                                 }
                             }
 
-                            // check to see if we terminate now
-                            if (terminate)
+                        }
+
+                        // are we reading forward?
+                        if (ReadForward > 0)
+                        {
+                            //advance the text reader and return all
+                            for (int i = 0; i < ReadForward; i++)
                             {
-                                if (fline.Contains(terminateString) || (!case_sensitive && (fline.ToLower().Contains(terminateString.ToLower()))))
+                                string fline = tr.ReadLine();
+                                count++;
+
+                                // check to see if we have reached a point to jump
+                                if (breakout)
                                 {
-                                    // jump out of while loop - we're done
+                                    if (fline.Contains(breakoutString) || (!case_sensitive && (fline.ToLower().Contains(breakoutString.ToLower()))))
+                                    {
+                                        // jump out of this iteration
+                                        break;
+                                    }
+                                }
+
+                                // check to see if we terminate now
+                                if (terminate)
+                                {
+                                    if (fline.Contains(terminateString) || (!case_sensitive && (fline.ToLower().Contains(terminateString.ToLower()))))
+                                    {
+                                        // jump out of while loop - we're done
+                                        return;
+                                    }
+                                }
+
+                                if (fline == null)
+                                {
                                     return;
                                 }
-                            }
 
-                            if (fline == null)
-                            {
-                                return;
-                            }
-
-                            if (!showMatchCount)
-                            {
-                                if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
-                                Console.WriteLine(LineNumber + fline.ToString());
+                                if (!showMatchCount)
+                                {
+                                    if (showLineNumbers) { LineNumber = count.ToString() + "  "; }
+                                    Console.WriteLine(LineNumber + fline.ToString());
+                                }
                             }
                         }
                     }
@@ -363,11 +377,10 @@ namespace findblock
             if (showMatchCount) { Console.WriteLine("Matches found: " + matchCount.ToString()); }
 
             // set exit 
-            if (count > 0) { Environment.ExitCode = 1; }
+            if (matchCount > 0) { Environment.ExitCode = 1; }
             
             // close file
             tr.Close();
-            tr = null;
 
         } // main
 
@@ -395,6 +408,7 @@ namespace findblock
             Console.WriteLine("\t -c \t Returns just the number of matches but does not return the matching lines or any read back or read forward lines.");
             Console.WriteLine("\t -t \t Stops searching and exits once this provided \"terminate\" string is encountered.");
             Console.WriteLine("\t -k \t Stops outputting read forward lines once this \"break\" string is encountered and starts searching again from that point forward.");
+            Console.WriteLine("\t -e \t Echos file name to console for lines containing a match.");
             Console.WriteLine("\t -? \t This screen.");
             Console.WriteLine();
             Console.WriteLine("\t Note: if -b and -f are *NOT* provided, then only the matching line is returned.");
@@ -424,7 +438,6 @@ namespace findblock
 
             return;
         }
-
 
     }
 }

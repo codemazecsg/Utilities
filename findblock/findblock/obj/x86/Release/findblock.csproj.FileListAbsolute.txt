@@ -8,3 +8,8 @@ C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\find
 C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\bin\Release\findblock.exe
 C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\bin\Release\findblock.pdb
 C:\Users\jamesask\Documents\Visual Studio 2013\Projects\findblock\findblock\findblock\obj\x86\Release\findblock.csprojResolveAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\bin\Release\findblock.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\bin\Release\findblock.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\obj\x86\Release\findblock.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\obj\x86\Release\findblock.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\findblock\findblock\obj\x86\Release\findblock.pdb
