@@ -1,0 +1,1 @@
+{"tableName":"foo","version":"1.0.0","numberOfCols":1,"numberOfRows":50,"numberOfFiles":1,"printColumnNames":false,"cols":[{"columnName":"c1","dataType":1,"specialDataClass":1,"defaultValue":"$RPT","valueListFile":"","minValue":"1","maxValue":"2147483647","monotonic":false,"monotonicSeed":1,"monotonicStep":1,"mantissa":2,"selectivity":-1,"selColumn":-1}]}

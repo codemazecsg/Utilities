@@ -21,7 +21,6 @@ C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Release\c
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Release\Newtonsoft.Json.dll
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\bin\Release\Newtonsoft.Json.xml
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Release\csvdatagen.csprojAssemblyReference.cache
-C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Release\csvdatagen.csproj.CoreCompileInputs.cache
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Release\csvdatagen.csproj.CopyComplete
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Release\csvdatagen.exe
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Release\csvdatagen.pdb

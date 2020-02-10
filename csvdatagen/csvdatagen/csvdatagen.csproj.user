@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
-    <StartArguments>-oc:\temp -C -ic:\temp\test.json</StartArguments>
+    <StartArguments>-oc:\drop -p5 -c</StartArguments>
   </PropertyGroup>
 </Project>

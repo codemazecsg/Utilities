@@ -7,6 +7,8 @@ using System.Reflection;
 using Newtonsoft.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Security.Permissions;
 
 namespace csvdatagen
 {
@@ -38,6 +40,10 @@ namespace csvdatagen
     #  v1.0.0.18    -  08/03/2019   Fixed bug in new PRO cmd that was causing a failure when evaluation default values < 4 bytes in length (invalid index reference into string)
     #  v1.0.0.19    -  10/25/2019   Fixed bug in encoding files to UTF-8 and others - default changed to UTF-8
     #  v1.0.0.20    -  10/25/2019   Fixed help documentation errors
+    #  v1.0.0.21    -  02/05/2020   Added additional help context for special default functions
+    #  v1.0.0.22    -  02/06/2020   Added monotonically increasing date values by setting the minimum and maximum range values to the same
+    #  v1.0.0.23    -  02/06/2020   Added repeatability with &RPT special default
+    #  v1.0.0.24    -  02/09/2020   Added accumalating capability with &ACU[] special default    
     #
     #
     */
@@ -56,6 +62,11 @@ namespace csvdatagen
         static bool lowerString = false;
         static bool disableUniqueness = false;
         static bool holdTermination = false;
+        static bool repeater = false;
+        static int repeatCeiling = 3;
+        static int repeatCountValue = 0;
+        static int nextRepeatCountValue = -1;
+        static bool firstRow = true;
 
         // Random # generators
         static Random rand = new Random();
@@ -68,22 +79,25 @@ namespace csvdatagen
         static string inputFormatFile = string.Empty;
         static string outputDirectory = string.Empty;
         static string outputFileNameConvention = string.Empty;
-        static Encoding encode = new UTF8Encoding(false);                    // default UTF-8
+        static Encoding encode = new UTF8Encoding(false);               // default UTF-8
 
         // model ref
         static CsvFormatter _csv;
 
         // data cache
-        static Int64 rowCount = 0;                  // current row count
-        static Int64 cacheRows = 0;                 // current cache size
-        static Int64 rowsCurrentlyWritten = 0;      // rows currently written to the current file
-        static Int64 totalRowsWritten = 0;          // total rows written out
-        static int fileCount = 0;                   // current file count
-        static Int64 rowsPerFile = 0;               // rows written per file
+        static Int64 rowCount = 0;                                      // current row count
+        static Int64 cacheRows = 0;                                     // current cache size
+        static Int64 rowsCurrentlyWritten = 0;                          // rows currently written to the current file
+        static Int64 totalRowsWritten = 0;                              // total rows written out
+        static int fileCount = 0;                                       // current file count
+        static Int64 rowsPerFile = 0;                                   // rows written per file
+        static DateTime stickyDate = new DateTime(1900,01,01);          // Date time for incrementing dates
         
         static int cacheFlushValue = 100000;        // cache flush value for when to flush cache to CSV file
         static int streamFlushValue = 100;          // flush stream buffer
         static string[] currentRow;                 // holds current row of data being generated
+        static string[] shadowRow;                  // hold the last row of data for future reference
+        static Stack<string>[] accumRow;            // hold accumulated numbers for &ACU[] reference
         static string[,] cache;                     // holds data to be serialized to CSV
         static string[][] selColumns;               // an array of arrays (jagged array) holding selectivity data per column
         static int currNextSelectIndex = 0;         // current top level index into selectivity j-array
@@ -1678,6 +1692,23 @@ namespace csvdatagen
 
                         break;
 
+                    case "P":
+                        // repeater
+                        string r = args[i].Substring(2);
+
+                        // assign to var
+                        if (!int.TryParse(r.ToString(), out repeatCeiling))
+                        {
+                            sendToConsole(ConsoleColor.Red, "Incorrect repeat ceiling value.");
+                            return false;
+                        }
+                        else
+                        {
+                            repeater = true;
+                        }
+
+                        break;
+
                     default:
 
                         sendToConsole(ConsoleColor.Red, "Incorrect parameter provided.");
@@ -1733,6 +1764,28 @@ namespace csvdatagen
             help.Append("/R              Specify the row terminator.  Default is CRLF.");
             help.Append(Environment.NewLine);
             help.Append("/E              Specify the file extension to use.  The default is .csv.");
+            help.Append(Environment.NewLine);
+            help.Append("/P              Enable data repeating with &RPT.  The value passed with /P will be used as a ceiling for generating a random repeat value for data generation.");
+            help.Append(Environment.NewLine);
+            help.Append(Environment.NewLine);
+            help.Append(Environment.NewLine);
+            help.Append("Special Default Command Values (commands are listed in the Default Value field of the template):");
+            help.Append(Environment.NewLine);
+            help.Append(Environment.NewLine);
+            help.Append("&ASN[XX]        Uses the value from column 'XX' to calculate an index into the provided value list.  Therefore, the same value will always be assigned for value 'XX' from the value list.");
+            help.Append(Environment.NewLine);
+            help.Append("&EQL[XX]        Uses the same value as that found in column 'XX'");
+            help.Append(Environment.NewLine);
+            help.Append("&GTR[XX]        Value used must be greater than the value in column 'XX'");
+            help.Append(Environment.NewLine);
+            help.Append("&LSS[XX]        Value used must be lesser than the value in column 'XX'");
+            help.Append(Environment.NewLine);
+            help.Append("&PRO[XX,YY,..]  Values are taken in proportions of 'XX', 'YY', and so on from the list of value lists.  'XX' and 'YY' values must be provided in decimal form like .05 for 5%, comma separated.  Value lists must be separated by semi-colons.");
+            help.Append(Environment.NewLine);
+            help.Append("&ACU[XX]        Generates random integer or decimal values that add up or accumulate to the value referenced in 'XX'.  The value referenced by 'XX' must have a special default value of &RPT.");
+            help.Append(Environment.NewLine);
+            help.Append("&RPT            Repeats the same value in the column that was used in the last data row that was generated.  Will repeat a random number of times based on a randomly generated repeat factor between 1 and the repeat ceiling specified with /P.");
+            help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
 
@@ -1982,8 +2035,41 @@ namespace csvdatagen
 
                         }
 
+                        if (_cmd.ToUpper() == "&ACU")
+                        {
+                            int _dt = 0;
+                            while (_dt < 1 || _dt > 2)
+                            {
+                                // set current to accept default value
+                                string _answer = "1";
+                                sendToConsole(defaultColor, string.Format(@"Enter the data type value for the accumulated column (1=INTEGER; 2=DECIMAL) [{0} - Enter to accept default]: ", _answer.ToString().ToUpper()), false, false);
+                                _answer = Console.ReadLine();
+
+                                if (!int.TryParse(_answer, out _dt))
+                                {
+                                    sendToConsole(ConsoleColor.Red, "You must select either (1=INTEGER; 2=DECIMAL)");
+                                    continue;
+                                }
+
+                                switch (_answer)
+                                {
+                                    case "1":
+                                        c.dataType = CsvFormatter.dataTypes.Integer;
+                                        break;
+                                    case "2":
+                                        c.dataType = CsvFormatter.dataTypes.Decimal;
+                                        break;
+                                }
+                            }
+                        }
+
                         // for all we do this
-                        c.dataType = CsvFormatter.dataTypes.String;
+                        if (_cmd != "&ACU")
+                        {
+                            c.dataType = CsvFormatter.dataTypes.String;
+                        }
+
+
                         c.defaultValue = _defaultValue;
                         _csv.columns[i] = c;
 
@@ -1991,6 +2077,11 @@ namespace csvdatagen
                         {
                             continue;
                         }
+                    }
+                    else if (_defaultValue.Length == 4 && _defaultValue == "&RPT")
+                    {
+                        // this is a special situation, we need to continue asking questions but not continue with the next column as below
+                        c.defaultValue = _defaultValue;
                     }
                     else
                     {
@@ -2227,6 +2318,12 @@ namespace csvdatagen
                             {
                                 c.minvalue = _minValue;
                             }
+
+                            // fix up
+                            if (c.minvalue.Contains("."))
+                            {
+                                c.minvalue = c.minvalue.Substring(0, c.minvalue.IndexOf('.'));
+                            }
                         }
                     }
                 }
@@ -2297,12 +2394,12 @@ namespace csvdatagen
                                 sendToConsole(ConsoleColor.Red, "You must enter a valid date.");
                                 _maxValue = string.Empty;
                             }
-                            else if (_m <= DateTime.Parse(c.minvalue.ToString()))
+                            else if (_m < DateTime.Parse(c.minvalue.ToString()))
                             {
                                 sendToConsole(ConsoleColor.Red, "The maximum date cannot be before or the same as the minimum date.");
                                 _maxValue = string.Empty;
                             }
-                            else if (_m.Day < 28 || _m.Day > 31)
+                            else if ((_m.Day < 28 || _m.Day > 31) && (_m != DateTime.Parse(c.minvalue)))
                             {
                                 sendToConsole(ConsoleColor.Red, "The maximum date must be the end of the month (i.e. 02/28/1976 or 08/31/1999). ");
                                 _maxValue = string.Empty;
@@ -2331,6 +2428,12 @@ namespace csvdatagen
                             else
                             {
                                 c.maxValue = _maxValue;
+                            }
+
+                            // we must represent the maximum decimal value 
+                            if (c.maxValue.Contains("."))
+                            {
+                                c.maxValue = c.maxValue.Substring(0, c.maxValue.IndexOf('.'));
                             }
                         }
                     }
@@ -2499,7 +2602,7 @@ namespace csvdatagen
                 }
 
                 // Do we specify a selectivity?  If the column is monotonic, then the selectivity is essentially equal to the overall cardinality
-                if (!c.monotonic)
+                if (!c.monotonic && !(c.dataType == CsvFormatter.dataTypes.Date && (c.minvalue == c.maxValue)))
                 {
                     string _selectivity = string.Empty;
                     int _selC = -1;
@@ -2687,6 +2790,15 @@ namespace csvdatagen
             // initialize array
             currentRow = new string[_csv.columns.Length];
 
+            // initialize stack array
+            accumRow = new Stack<string>[_csv.columns.Length];
+
+            // initialize
+            for (int t = 0; t < accumRow.Length; t++)
+            {
+                accumRow[t] = new Stack<string>();
+            }
+
             // initialize cache
             initializeCache();
 
@@ -2716,6 +2828,36 @@ namespace csvdatagen
                     return false;
                 }
 
+                // control flow flag
+                firstRow = false;
+
+                // clone current row to shadow
+                if (repeater)
+                {
+                    shadowRow = (string[])currentRow.Clone();
+                    if (repeatCountValue > 0)
+                    {
+                        repeatCountValue--;
+                    }
+                    else
+                    {
+                        if (nextRepeatCountValue > -1)
+                        {
+                            repeatCountValue = (nextRepeatCountValue - 1);
+                            nextRepeatCountValue = -1;
+                        }
+                        else
+                        {
+                            if (!int.TryParse(getRandomIntegerAsString(1, repeatCeiling), out repeatCountValue))
+                            {
+                                sendToConsole(ConsoleColor.Red, "Failed to generate new repeater value.  Turning off repeat functionality.");
+                                repeatCountValue = 0;
+                                repeater = false;
+                            }
+                        }
+                    }
+                }
+                
                 // copy current row to cache
                 if (!moveCurrentRow())
                 {
@@ -2758,11 +2900,16 @@ namespace csvdatagen
                 // get current column definition
                 CsvFormatter.column c = _csv.columns[i];
 
-                // in the default, PRO is a special situation that is built up front
-                if (c.defaultValue != string.Empty && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "PRO")))
+                // in the default, PRO is a special situation that is built up front and RPT must be handled w.r.t. repeatCountValue
+                if ((c.defaultValue != string.Empty && c.defaultValue.Length >= 4) && ((c.defaultValue.Substring(1,3).ToUpper() == "RPT") && (repeatCountValue > 0)))
+                {
+                    // here we actually need to defer because we don't know if the dependent value has been evaluated yet
+                    currentRow[i] = "__DEFERRED__";
+                }
+                else if (c.defaultValue != string.Empty && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "PRO")) && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "RPT")))
                 {
                     if ((c.defaultValue.Substring(0, 1)) == "&" && ((c.defaultValue.Substring(1, 3).ToUpper() == "ASN") || (c.defaultValue.Substring(1, 3).ToUpper() == "EQL") || (c.defaultValue.Substring(1, 3).ToUpper() == "GTR") ||
-                        (c.defaultValue.Substring(1, 3).ToUpper() == "LSS")))
+                        (c.defaultValue.Substring(1, 3).ToUpper() == "LSS") || (c.defaultValue.Substring(1,3).ToUpper() == "ACU")))
                     {
                         // we have a special default = function
                         // here we actually need to defer because we don't know if the dependent value has been evaluated yet
@@ -2896,8 +3043,8 @@ namespace csvdatagen
 
                     if (c.dataType == CsvFormatter.dataTypes.Integer || c.dataType == CsvFormatter.dataTypes.String || c.dataType == CsvFormatter.dataTypes.Decimal)
                     {
-                        n = Int64.Parse(c.minvalue);
-                        x = Int64.Parse(c.maxValue);
+                        n = Int64.Parse(c.minvalue.ToString());
+                        x = Int64.Parse(c.maxValue.ToString());
                         m = c.mantissa;
                     }
                     else
@@ -2929,7 +3076,20 @@ namespace csvdatagen
                             break;
 
                         case CsvFormatter.dataTypes.Date:
-                            currentRow[i] = generateRandomDateString(s, e);
+
+                            if (s == e)
+                            {
+                                if (stickyDate == new DateTime(1900,01,01))
+                                {
+                                    stickyDate = s;
+                                }
+                                stickyDate = stickyDate.AddDays(1);
+                                currentRow[i] = stickyDate.ToString();
+                            }
+                            else
+                            {
+                                currentRow[i] = generateRandomDateString(s, e);
+                            }
                             break;
 
                         default:
@@ -2952,14 +3112,129 @@ namespace csvdatagen
                     // we must extract the reference col id
                     int _colId = 0;
 
-                    if (!int.TryParse(_default.Substring(5).Replace("]", ""), out _colId))
+                    if (_default.Substring(1, 3) != "RPT")
                     {
-                        sendToConsole(ConsoleColor.Red, String.Format(@"Unable to extract dependent column id for special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                        continue;
+                        if (!int.TryParse(_default.Substring(5).Replace("]", ""), out _colId))
+                        {
+                            sendToConsole(ConsoleColor.Red, String.Format(@"Unable to extract dependent column id for special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                            continue;
+                        }
                     }
 
                     switch (_cmd.ToUpper())
                     {
+                        case "ACU":
+                            // this means that we are accumulating values for assignment.  These must be done upfront based on the reference column to simply finding the original accumulated value
+
+                            // safety checks first
+                            // This column must be either a decimal or integer
+                            if (_csv.columns[i].dataType != CsvFormatter.dataTypes.Decimal && _csv.columns[i].dataType != CsvFormatter.dataTypes.Integer)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Column [{0}] must either be integer or decimal data type to use the &ACU special default.", i.ToString()));
+                                continue;
+                            }
+
+                            // The reference column must be either decimal or integer
+                            if (_csv.columns[_colId].dataType != CsvFormatter.dataTypes.Decimal && _csv.columns[_colId].dataType != CsvFormatter.dataTypes.Integer)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Reference column [{0}] must either be integer or decimal data type to use the &ACU special default.", _colId.ToString()));
+                                continue;
+                            }
+
+                            if (_csv.columns[_colId].dataType != _csv.columns[i].dataType)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The data types of the &ACU column and reference column must be the same."));
+                                continue;
+                            }
+
+                            // is there a value in that referenced column
+                            if (currentRow[_colId] == null)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+
+                            // lastly repeater must be enabled 
+                            if (!repeater)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Repeating values must be enabled and used for &ACU special default capability."));
+                                continue;
+                            }
+
+                            if (_csv.columns[_colId].defaultValue != "&RPT")
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Accumulated columns must reference a repeating column."));
+                                continue;
+                            }
+                            
+                            if (repeatCountValue == 0)
+                            {
+                                nextRepeatCountValue = int.Parse(getRandomIntegerAsString(1, repeatCeiling));
+
+                                Debug.Write(nextRepeatCountValue.ToString());
+
+                                // we have a new repeat value which means we have a new count 
+                                // so we get our base value
+                                if (_csv.columns[_colId].dataType == CsvFormatter.dataTypes.Decimal)
+                                {
+                                    // decimal, let's get the main value first
+                                    decimal _root = decimal.Parse(currentRow[_colId].ToString());
+                                    decimal _acu = 0.00m;
+                                    decimal _dval = 0.00m;
+              
+                                    for (int z = 0; z < nextRepeatCountValue; z++)
+                                    {
+                                        // we must treat the last value special
+                                        if (z == (nextRepeatCountValue - 1))
+                                        {
+                                            // push the remainder
+                                            accumRow[i].Push((_root - _acu).ToString());
+                                        }
+                                        else
+                                        {
+                                            // calculate a random value and push
+                                            _dval = decimal.Parse(getRandomDecimal(0, (long)(_root - _acu), _csv.columns[i].mantissa));
+                                            accumRow[i].Push(_dval.ToString());
+                                            _acu += _dval;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // must be an integer
+                                    Int64 _root = Int64.Parse(currentRow[_colId].ToString());
+                                    Int64 _acu = 0;
+                                    Int64 _dval = 0;
+
+                                    for (int y = 0; y < nextRepeatCountValue; y++)
+                                    {
+                                        // we must treal the last value special
+                                        if (y == (nextRepeatCountValue - 1 ))
+                                        {
+                                            // push remainder
+                                            accumRow[i].Push((_root - _acu).ToString());
+                                        }
+                                        else
+                                        {
+                                            // calculate values
+                                            _dval = Int64.Parse(getRandomIntegerAsString(0, (long)(_root - _acu)));
+                                            accumRow[i].Push(_dval.ToString());
+                                            _acu += _dval;
+                                        }
+                                    }
+                                }
+                                Debug.WriteLine("popped");
+                                currentRow[i] = accumRow[i].Pop().ToString();
+                            }
+                            else
+                            {
+                                // now a new value, so we just pop the current value
+                                Debug.WriteLine("popped");
+                                currentRow[i] = accumRow[i].Pop().ToString();
+                            }
+
+                            break;
+
                         case "ASN":
                             // this means we must reference and "assign" or match a value with the same dependent value each time
 
@@ -2995,7 +3270,14 @@ namespace csvdatagen
                             switch (_csv.columns[_colId].dataType)
                             {
                                 case CsvFormatter.dataTypes.Integer:
-                                    _baseValue = Int64.Parse(currentRow[_colId].ToString());
+                                    if (currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" && _csv.columns[_colId].defaultValue == "&RPT" && repeatCountValue > 0)
+                                    {
+                                        _baseValue = Int64.Parse(shadowRow[_colId].ToString());
+                                    }
+                                    else
+                                    {
+                                        _baseValue = Int64.Parse(currentRow[_colId].ToString());
+                                    }
 
                                     break;
 
@@ -3019,7 +3301,6 @@ namespace csvdatagen
                                     sendToConsole(ConsoleColor.Red, String.Format(@"The data type ({0}) of the reference column is not supported by the &ASN function for the special default in column '{1}'", _csv.columns[_colId].dataType.ToString(), _csv.columns[i].columnName.ToString()));
                                     continue;
 
-                                    break;
                             }
 
                             // we have the value, now we must get the indexer
@@ -3049,7 +3330,14 @@ namespace csvdatagen
                             }
 
                             // assign same value "EQL"
-                            currentRow[i] = currentRow[_colId];
+                            if (currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" && _csv.columns[_colId].defaultValue == "&RPT" && repeatCountValue > 0)
+                            {
+                                currentRow[i] = shadowRow[_colId];
+                            }
+                            else
+                            {
+                                currentRow[i] = currentRow[_colId];
+                            }
                             break;
 
                         case "GTR":
@@ -3072,6 +3360,13 @@ namespace csvdatagen
 
                             // this number must be "greater" so we set the minimum here and validate this is a numeric type
                             Int64 _newMin = 0;
+
+                            // if still set to __DEFERRED__ then we pre-assign
+                            if (currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" && _csv.columns[_colId].defaultValue == "&RPT" && repeatCountValue > 0)
+                            {
+                                // pre-assign?
+                                currentRow[_colId] = shadowRow[_colId];
+                            }
 
                             if (!Int64.TryParse(currentRow[_colId].ToString(), out _newMin))
                             {
@@ -3110,6 +3405,13 @@ namespace csvdatagen
                             // this number must be "lesser" so we set the maximum here and validate this is a numeric type
                             Int64 _newMax = 0;
 
+                            // if still set to __DEFERRED__ then we pre-assign
+                            if (currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" && _csv.columns[_colId].defaultValue == "&RPT" && repeatCountValue > 0)
+                            {
+                                // pre-assign?
+                                currentRow[_colId] = shadowRow[_colId];
+                            }
+
                             if (!Int64.TryParse(currentRow[_colId].ToString(), out _newMax))
                             {
                                 sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is not a numeric type for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
@@ -3126,12 +3428,17 @@ namespace csvdatagen
                             currentRow[i] = getRandomIntegerAsString(Int64.Parse(_csv.columns[i].minvalue), _newMax);
                             break;
 
+                        case "RPT":
+                            // get previous value
+                            currentRow[i] = shadowRow[i];
+
+                            break;
+
                         default:
 
                             sendToConsole(ConsoleColor.Red, String.Format(@"An unknown function was provided for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
                             continue;
 
-                            break;
                     }
                 }
             }
