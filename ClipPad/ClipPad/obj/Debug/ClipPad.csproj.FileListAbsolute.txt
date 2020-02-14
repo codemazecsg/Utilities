@@ -1,0 +1,9 @@
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\bin\Debug\ClipPad.exe.config
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\bin\Debug\ClipPad.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\bin\Debug\ClipPad.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.frmClipPad.resources
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.Properties.Resources.resources
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.csproj.GenerateResource.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.pdb

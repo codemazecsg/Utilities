@@ -1,0 +1,9 @@
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\bin\Debug\csvtemplatepartition.exe.config
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\bin\Debug\csvtemplatepartition.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\bin\Debug\csvtemplatepartition.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\bin\Debug\Newtonsoft.Json.dll
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\bin\Debug\Newtonsoft.Json.xml
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\obj\Debug\csvtemplatepartition.csprojAssemblyReference.cache
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\obj\Debug\csvtemplatepartition.csproj.CopyComplete
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\obj\Debug\csvtemplatepartition.exe
+C:\Users\jamesask\Documents\GitHub\Utilities\csvtemplatepartition\csvtemplatepartition\obj\Debug\csvtemplatepartition.pdb
