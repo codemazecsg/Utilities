@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
-    <StartArguments>-oc:\drop -p5 -c</StartArguments>
+    <StartArguments>/oc:\drop /ic:\drop\marketdata.json /K0:MSFT -C -G</StartArguments>
   </PropertyGroup>
 </Project>

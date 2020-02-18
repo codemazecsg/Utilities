@@ -44,6 +44,8 @@ namespace csvdatagen
     #  v1.0.0.22    -  02/06/2020   Added monotonically increasing date values by setting the minimum and maximum range values to the same
     #  v1.0.0.23    -  02/06/2020   Added repeatability with &RPT special default
     #  v1.0.0.24    -  02/09/2020   Added accumalating capability with &ACU[] special default    
+    #  v1.0.0.25    -  02/17/2020   Added forced value substitution
+    #  v1.0.0.26    -  02/17/2020   Added new special defaults -> &VAR, &ADD, &MUL, &SUB, &DIV, &HGH, &LOW, &LKU, and &CON
     #
     #
     */
@@ -63,11 +65,17 @@ namespace csvdatagen
         static bool disableUniqueness = false;
         static bool holdTermination = false;
         static bool repeater = false;
+        static bool variance = false;
         static int repeatCeiling = 3;
         static int repeatCountValue = 0;
         static int nextRepeatCountValue = -1;
         static bool firstRow = true;
-
+        static bool secondaryDeferrals = true;
+        static int forcedValColumn = -1;
+        static string forcedVal = string.Empty;
+        static bool allowNegativeVariance = true;
+        static string concatChar = string.Empty;
+        
         // Random # generators
         static Random rand = new Random();
         static Random rString = new Random();
@@ -180,6 +188,16 @@ namespace csvdatagen
 
             // show model
             displayModelFormatFile();
+
+            // see if we have variance cmds
+            foreach (CsvFormatter.column c in _csv.columns)
+            {
+                if (c.defaultValue.ToUpper().Contains("&VAR"))
+                {
+                    variance = true;
+                    break;
+                }
+            }
 
             // check and build special class data domains that are file dependent
             foreach (CsvFormatter.column c in _csv.columns)
@@ -1709,6 +1727,46 @@ namespace csvdatagen
 
                         break;
 
+                    case "S":
+                        // secondary deferrals
+                        secondaryDeferrals = false;
+
+                        break;
+
+                    case "K":
+                        // forced value
+                        forcedVal = args[i].Substring(2);
+
+                        string[] _fv = forcedVal.Split(':');
+                        
+                        if (_fv.Length != 2)
+                        {
+                            sendToConsole(ConsoleColor.Red, "Incorrect value provided for forced value execution.");
+                            return false;
+                        }
+
+                        if (!int.TryParse(_fv[0].ToString(), out forcedValColumn))
+                        {
+                            sendToConsole(ConsoleColor.Red, "Incorrect value provided for forced value column.");
+                            return false;
+                        }
+
+                        forcedVal = _fv[1].ToString();
+
+                        break;
+
+                    case "G":
+                        // no negative variance
+                        allowNegativeVariance = false;
+
+                        break;
+
+                    case "Z":
+                        // concatenation character
+                        concatChar = args[i].Substring(2);
+
+                        break;
+
                     default:
 
                         sendToConsole(ConsoleColor.Red, "Incorrect parameter provided.");
@@ -1728,7 +1786,7 @@ namespace csvdatagen
             help.Append(Environment.NewLine);
             help.Append("csvdatagen - CSV File Data Generation Tool for testing.");
             help.Append(Environment.NewLine);
-            help.Append("Jay Askew - 2019(c)");
+            help.Append(String.Format(@"Jay Askew - {0}(c)", DateTime.Now.Year.ToString()));
             help.Append(Environment.NewLine);
             help.Append("Version: ");
             help.Append(Assembly.GetExecutingAssembly().GetName().Version.ToString());
@@ -1767,6 +1825,14 @@ namespace csvdatagen
             help.Append(Environment.NewLine);
             help.Append("/P              Enable data repeating with &RPT.  The value passed with /P will be used as a ceiling for generating a random repeat value for data generation.");
             help.Append(Environment.NewLine);
+            help.Append("/S              Disable secondary deferral processing.  Disables processing of all commands marked with * below.");
+            help.Append(Environment.NewLine);
+            help.Append("/K              Specifies forcing the use of a value provided on the command line in the format of <column_number:value_to_use>.  Does not require changes to the template.");
+            help.Append(Environment.NewLine);
+            help.Append("/G              Disabled allowing negative values on &VAR columns.");
+            help.Append(Environment.NewLine);
+            help.Append("/Z              Specifies a character to use between two strings when concatenating two columns with &CON[X,Y].");
+            help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
             help.Append("Special Default Command Values (commands are listed in the Default Value field of the template):");
@@ -1785,6 +1851,24 @@ namespace csvdatagen
             help.Append("&ACU[XX]        Generates random integer or decimal values that add up or accumulate to the value referenced in 'XX'.  The value referenced by 'XX' must have a special default value of &RPT.");
             help.Append(Environment.NewLine);
             help.Append("&RPT            Repeats the same value in the column that was used in the last data row that was generated.  Will repeat a random number of times based on a randomly generated repeat factor between 1 and the repeat ceiling specified with /P.");
+            help.Append(Environment.NewLine);
+            help.Append("&VAR[XX]        Applies a variance in each row to the original seed value which is randomly generated.  The variance is in the range of minvalue and maxvalue.  Only supports INT and DECIMAL data types.");
+            help.Append(Environment.NewLine);
+            help.Append("&MUL[X,Y]       Multiples values generated in columns X and Y for the current row (X * Y).  Only supports INT and DECIMAL data types.");
+            help.Append(Environment.NewLine);
+            help.Append("&ADD[X,Y]       Adds values generated in columns X and Y for the current row (X + Y).  Only supports INT and DECIMAL data types.");
+            help.Append(Environment.NewLine);
+            help.Append("&SUB[X,Y]       Subtracts value in column Y from value in column X for current row (X - Y).  Only supports INT and DECIMAL data types.");
+            help.Append(Environment.NewLine);
+            help.Append("&DIV[X,Y]       Divides value in column X by value in column Y for current row (X / Y).  Only supports INT and DECIMAL data types.");
+            help.Append(Environment.NewLine);
+            help.Append("&HGH            Generates a value based on the column data type that is the highest value in the row of that data type.  Only supports INT and DECIMAL data types.");
+            help.Append(Environment.NewLine);
+            help.Append("&LOW            Generates a value based on the column data type that is the lowest value in the row of that data type.  Only supports INT and DECIMAL data types.");
+            help.Append(Environment.NewLine);
+            help.Append("&CON[X,Y]       Concatenates string data in column X and column y with option character supplied with /Z.");
+            help.Append(Environment.NewLine);
+            help.Append("&LKU[X]         Uses an ordinal position value - which cannot be a special default calculated value - to perform a lookup against the supplied value list.");
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
@@ -2073,12 +2157,12 @@ namespace csvdatagen
                         c.defaultValue = _defaultValue;
                         _csv.columns[i] = c;
 
-                        if (_cmd.ToUpper() != "&ASN" && _cmd.ToUpper() != "&PRO")
+                        if (_cmd.ToUpper() != "&ASN" && _cmd.ToUpper() != "&PRO" && _cmd.ToUpper() != "&VAR")
                         {
                             continue;
                         }
                     }
-                    else if (_defaultValue.Length == 4 && _defaultValue == "&RPT")
+                    else if (_defaultValue.Length == 4 && (_defaultValue == "&RPT" || _defaultValue == "&HGH" || _defaultValue == "&LOW"))
                     {
                         // this is a special situation, we need to continue asking questions but not continue with the next column as below
                         c.defaultValue = _defaultValue;
@@ -2093,61 +2177,66 @@ namespace csvdatagen
                     }
                 }
 
-                // get any value list file
-                string _valueListFile = "undefined";
-                string[] _valueListFilesArray;
-
-                while (_valueListFile == "undefined")
+                // get value list
+                if (c.defaultValue.Length < 3 || (c.defaultValue.Length >= 4 && c.defaultValue.Substring(0,4) != "&VAR" && c.defaultValue.Substring(0,4) != "&HGH" && c.defaultValue.Substring(0,4) != "&LOW"))
                 {
-                    sendToConsole(defaultColor, "Enter the full path for a file with a preset list of values [PRESS ENTER FOR NO VALUE LIST FILE]: ", false, false);
-                    _valueListFile = Console.ReadLine();
+                    // get any value list file
+                    string _valueListFile = "undefined";
+                    string[] _valueListFilesArray;
 
-                    if (_valueListFile.Length > 0)
+                    while (_valueListFile == "undefined")
                     {
-                        // we must check for multiple files
-                        _valueListFilesArray = _valueListFile.Split(new char[] { ';' });
+                        sendToConsole(defaultColor, "Enter the full path for a file with a preset list of values [PRESS ENTER FOR NO VALUE LIST FILE]: ", false, false);
+                        _valueListFile = Console.ReadLine();
 
-                        for (int v = 0; v < _valueListFilesArray.Length; v++)
+                        if (_valueListFile.Length > 0)
                         {
-                            if (!File.Exists(_valueListFilesArray[v]))
+                            // we must check for multiple files
+                            _valueListFilesArray = _valueListFile.Split(new char[] { ';' });
+
+                            for (int v = 0; v < _valueListFilesArray.Length; v++)
                             {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"One or more of the provided files [{0}] could be found or does not exist.", _valueListFilesArray[v].ToString()));
+                                if (!File.Exists(_valueListFilesArray[v]))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"One or more of the provided files [{0}] could be found or does not exist.", _valueListFilesArray[v].ToString()));
+                                    _valueListFilesArray = null;
+                                    _valueListFile = "undefined";
+                                    break;
+                                }
+                            }
+
+                            if (_cmd.ToUpper() == "&ASN" && _valueListFilesArray.Length > 1)
+                            {
+                                sendToConsole(ConsoleColor.Red, "You can only provide one value list file for the &ASN command.");
                                 _valueListFilesArray = null;
                                 _valueListFile = "undefined";
                             }
                         }
-
-                        if (_cmd.ToUpper() == "&ASN" && _valueListFilesArray.Length > 1)
+                        else
                         {
-                            sendToConsole(ConsoleColor.Red, "You can only provide one value list file for the &ASN command.");
-                            _valueListFilesArray = null;
-                            _valueListFile = "undefined";
+                            // nothing was provided which is fine unless we require it for &ASN or &PRO
+                            if (_cmd.ToUpper() == "&ASN")
+                            {
+                                sendToConsole(ConsoleColor.Red, "You must provide a value list file for the &ASN command in the special default.");
+                                _valueListFile = "undefined";
+                            }
+
+                            if (_cmd.ToUpper() == "&PRO")
+                            {
+                                sendToConsole(ConsoleColor.Red, "You must provide one or more value list files for the &PRO command in the special default.");
+                                _valueListFile = "undefined";
+                            }
                         }
                     }
-                    else
+
+                    // if they provided a value we're done
+                    if (_valueListFile != string.Empty)
                     {
-                        // nothing was provided which is fine unless we require it for &ASN or &PRO
-                        if (_cmd.ToUpper() == "&ASN")
-                        {
-                            sendToConsole(ConsoleColor.Red, "You must provide a value list file for the &ASN command in the special default.");
-                            _valueListFile = "undefined";
-                        }
-
-                        if (_cmd.ToUpper() == "&PRO")
-                        {
-                            sendToConsole(ConsoleColor.Red, "You must provide one or more value list files for the &PRO command in the special default.");
-                            _valueListFile = "undefined";
-                        }
+                        c.dataType = CsvFormatter.dataTypes.String;
+                        c.valueListFile = _valueListFile;
+                        _csv.columns[i] = c;
+                        continue;
                     }
-                }
-
-                // if they provided a value we're done
-                if (_valueListFile != string.Empty)
-                {
-                    c.dataType = CsvFormatter.dataTypes.String;
-                    c.valueListFile = _valueListFile;
-                    _csv.columns[i] = c;
-                    continue;
                 }
 
                 // get the data type of the column
@@ -2439,135 +2528,140 @@ namespace csvdatagen
                     }
                 }
 
-                // is it monotonic 
-                if (c.dataType == CsvFormatter.dataTypes.Integer && c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
+                // monotonics
+                if (c.defaultValue.Length < 3 || (c.defaultValue.Length >= 4 && c.defaultValue.Substring(0, 4) != "&VAR" && c.defaultValue.Substring(0, 4) != "&HGH" && c.defaultValue.Substring(0, 4) != "&LOW"))
                 {
-                    string _monotonic = "false";
 
-                    sendToConsole(defaultColor, string.Format(@"Use monotonically increasing values for this INTEGER column [{0} - Enter to accept default]: ", _monotonic.ToString().ToUpper()), false, false);
-                    _monotonic = Console.ReadLine();
-
-                    if (_monotonic.ToLower() == "true" || _monotonic.ToLower() == "t")
+                    // is it monotonic 
+                    if (c.dataType == CsvFormatter.dataTypes.Integer && c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
                     {
-                        Int64 _minValue = Int64.Parse(c.minvalue.ToString());
-                        Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
-                        Int64 _diff = ((_maxValue - _minValue) + 1); // needed because we want the values at both ends of the range
-                        if (_diff < _csv.numberOfRows)
+                        string _monotonic = "false";
+
+                        sendToConsole(defaultColor, string.Format(@"Use monotonically increasing values for this INTEGER column [{0} - Enter to accept default]: ", _monotonic.ToString().ToUpper()), false, false);
+                        _monotonic = Console.ReadLine();
+
+                        if (_monotonic.ToLower() == "true" || _monotonic.ToLower() == "t")
                         {
-                            sendToConsole(ConsoleColor.Red, "You cannot use monotonically increasing values when the number of rows exceeds the range of min to max values.  Disabling monotonic value generation.");
+                            Int64 _minValue = Int64.Parse(c.minvalue.ToString());
+                            Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
+                            Int64 _diff = ((_maxValue - _minValue) + 1); // needed because we want the values at both ends of the range
+                            if (_diff < _csv.numberOfRows)
+                            {
+                                sendToConsole(ConsoleColor.Red, "You cannot use monotonically increasing values when the number of rows exceeds the range of min to max values.  Disabling monotonic value generation.");
+                                c.monotonic = false;
+                            }
+                            else
+                            {
+                                c.monotonic = true;
+                            }
+                        }
+                        else
+                        {
                             c.monotonic = false;
                         }
-                        else
-                        {
-                            c.monotonic = true;
-                        }
                     }
-                    else
+
+                    // if monotonic, what is the seed?
+                    if (c.dataType == CsvFormatter.dataTypes.Integer && c.monotonic && c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
                     {
-                        c.monotonic = false;
-                    }
-                }
+                        string _monotonicSeed = string.Empty;
+                        Int64 _mSeed = 1;
 
+                        Int64 _minSeed = 1;
+                        bool _result = Int64.TryParse(c.minvalue.ToString(), out _minSeed);
+                        if (_result && _minSeed >= 0) { c.monotonicSeed = _minSeed; }
 
-                // if monotonic, what is the seed?
-                if (c.dataType == CsvFormatter.dataTypes.Integer && c.monotonic && c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
-                {
-                    string _monotonicSeed = string.Empty;
-                    Int64 _mSeed = 1;
-
-                    Int64 _minSeed = 1;
-                    bool _result = Int64.TryParse(c.minvalue.ToString(), out _minSeed);
-                    if (_result && _minSeed >= 0) { c.monotonicSeed = _minSeed; }
-
-                    while (_monotonicSeed == string.Empty)
-                    {
-                        sendToConsole(defaultColor, string.Format(@"Enter the seed value be for the monotonically increasing column [{0} - Enter to accept default]: ", c.monotonicSeed.ToString().ToUpper()), false, false);
-                        _monotonicSeed = Console.ReadLine();
-
-                        if (_monotonicSeed == string.Empty)
+                        while (_monotonicSeed == string.Empty)
                         {
-                            // nothing was provided, use default
-                            _monotonicSeed = c.monotonicSeed.ToString();
-                        }
+                            sendToConsole(defaultColor, string.Format(@"Enter the seed value be for the monotonically increasing column [{0} - Enter to accept default]: ", c.monotonicSeed.ToString().ToUpper()), false, false);
+                            _monotonicSeed = Console.ReadLine();
 
-                        if (!Int64.TryParse(_monotonicSeed.ToString(), out _mSeed))
-                        {
-                            sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic seed value.");
-                            _monotonicSeed = string.Empty;
-                        }
-                        else
-                        {
-                            if (_mSeed < 1)
+                            if (_monotonicSeed == string.Empty)
                             {
-                                // need a valid positive value
+                                // nothing was provided, use default
+                                _monotonicSeed = c.monotonicSeed.ToString();
+                            }
+
+                            if (!Int64.TryParse(_monotonicSeed.ToString(), out _mSeed))
+                            {
                                 sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic seed value.");
                                 _monotonicSeed = string.Empty;
                             }
                             else
                             {
-                                Int64 _minValue = Int64.Parse(c.minvalue.ToString());
-                                if (_mSeed < _minValue)
+                                if (_mSeed < 1)
                                 {
-                                    sendToConsole(ConsoleColor.Red, string.Format(@"You cannot use a monotonically increasing INTEGER value with a seed value of {0} that is below the minimum range value {1}.  Disabling monotonic value generation.", _mSeed.ToString(), _minValue.ToString()));
-                                    c.monotonic = false;
-                                    _mSeed = 1;
+                                    // need a valid positive value
+                                    sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic seed value.");
+                                    _monotonicSeed = string.Empty;
                                 }
                                 else
                                 {
-                                    c.monotonicSeed = _mSeed;
+                                    Int64 _minValue = Int64.Parse(c.minvalue.ToString());
+                                    if (_mSeed < _minValue)
+                                    {
+                                        sendToConsole(ConsoleColor.Red, string.Format(@"You cannot use a monotonically increasing INTEGER value with a seed value of {0} that is below the minimum range value {1}.  Disabling monotonic value generation.", _mSeed.ToString(), _minValue.ToString()));
+                                        c.monotonic = false;
+                                        _mSeed = 1;
+                                    }
+                                    else
+                                    {
+                                        c.monotonicSeed = _mSeed;
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                // if monotonic, is there a step to use?
-                if (c.dataType == CsvFormatter.dataTypes.Integer && c.monotonic && c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
-                {
-                    string _monotonicStep = string.Empty;
-                    int _mStep = 1;
-
-                    while (_monotonicStep == string.Empty)
+                    // if monotonic, is there a step to use?
+                    if (c.dataType == CsvFormatter.dataTypes.Integer && c.monotonic && c.specialDataClass == CsvFormatter.SpecialDataClasses.None)
                     {
-                        sendToConsole(defaultColor, string.Format(@"Enter the step value be for the monotonically increasing column [{0} - Enter to accept default]: ", c.monotonicStep.ToString().ToUpper()), false, false);
-                        _monotonicStep = Console.ReadLine();
+                        string _monotonicStep = string.Empty;
+                        int _mStep = 1;
 
-                        if (_monotonicStep == string.Empty)
+                        while (_monotonicStep == string.Empty)
                         {
-                            // accept default
-                            _monotonicStep = c.monotonicStep.ToString();
-                        }
+                            sendToConsole(defaultColor, string.Format(@"Enter the step value be for the monotonically increasing column [{0} - Enter to accept default]: ", c.monotonicStep.ToString().ToUpper()), false, false);
+                            _monotonicStep = Console.ReadLine();
 
-                        if (!int.TryParse(_monotonicStep.ToString(), out _mStep))
-                        {
-                            sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic step value.");
-                            _monotonicStep = string.Empty;
-                        }
-                        else
-                        {
-                            if (_mStep < 1)
+                            if (_monotonicStep == string.Empty)
                             {
-                                // need a valid positive value
+                                // accept default
+                                _monotonicStep = c.monotonicStep.ToString();
+                            }
+
+                            if (!int.TryParse(_monotonicStep.ToString(), out _mStep))
+                            {
                                 sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic step value.");
+                                _monotonicStep = string.Empty;
                             }
                             else
                             {
-                                Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
-                                Int64 _diff = ((_maxValue - c.monotonicSeed) + 1);  // needed because we want the values at both ends of the range
-                                Int64 _distincts = (_diff / _mStep);
-                                if (_distincts < _csv.numberOfRows)
+                                if (_mStep < 1)
                                 {
-                                    sendToConsole(ConsoleColor.Red, string.Format(@"You cannot use a monotonically increasing INTEGER value with a step value of {0} since not enough distinct values will be available for the number of rows requested.  Disabling monotonic value generation.", _mStep.ToString()));
-                                    c.monotonic = false;
-                                    _mStep = 1;
+                                    // need a valid positive value
+                                    sendToConsole(ConsoleColor.Red, "You must enter a valid integer value for the monotonic step value.");
                                 }
                                 else
                                 {
-                                    c.monotonicStep = _mStep;
+                                    Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
+                                    Int64 _diff = ((_maxValue - c.monotonicSeed) + 1);  // needed because we want the values at both ends of the range
+                                    Int64 _distincts = (_diff / _mStep);
+                                    if (_distincts < _csv.numberOfRows)
+                                    {
+                                        sendToConsole(ConsoleColor.Red, string.Format(@"You cannot use a monotonically increasing INTEGER value with a step value of {0} since not enough distinct values will be available for the number of rows requested.  Disabling monotonic value generation.", _mStep.ToString()));
+                                        c.monotonic = false;
+                                        _mStep = 1;
+                                    }
+                                    else
+                                    {
+                                        c.monotonicStep = _mStep;
+                                    }
                                 }
                             }
                         }
                     }
+
                 }
 
                 // if decimal, what is the mantissa (the portion after the decimal)?
@@ -2601,64 +2695,68 @@ namespace csvdatagen
                     }
                 }
 
-                // Do we specify a selectivity?  If the column is monotonic, then the selectivity is essentially equal to the overall cardinality
-                if (!c.monotonic && !(c.dataType == CsvFormatter.dataTypes.Date && (c.minvalue == c.maxValue)))
+                // selectivity
+                if (c.defaultValue.Length < 3 || (c.defaultValue.Length >= 4 && c.defaultValue.Substring(0, 4) != "&VAR" && c.defaultValue.Substring(0, 4) != "&HGH" && c.defaultValue.Substring(0, 4) != "&LOW"))
                 {
-                    string _selectivity = string.Empty;
-                    int _selC = -1;
-
-                    while (_selectivity == string.Empty)
+                    // Do we specify a selectivity?  If the column is monotonic, then the selectivity is essentially equal to the overall cardinality
+                    if (!c.monotonic && !(c.dataType == CsvFormatter.dataTypes.Date && (c.minvalue == c.maxValue)))
                     {
-                        sendToConsole(defaultColor, string.Format(@"Enter the selectivity of the column (-1 for random) [{0} - Enter to accept default]: ", c.selectivity.ToString().ToUpper()), false, false);
-                        _selectivity = Console.ReadLine();
+                        string _selectivity = string.Empty;
+                        int _selC = -1;
 
-                        // set to default if no value provided
-                        if (_selectivity == string.Empty && _selectivity.Length == 0)
+                        while (_selectivity == string.Empty)
                         {
-                            _selectivity = c.selectivity.ToString();
-                        }
+                            sendToConsole(defaultColor, string.Format(@"Enter the selectivity of the column (-1 for random) [{0} - Enter to accept default]: ", c.selectivity.ToString().ToUpper()), false, false);
+                            _selectivity = Console.ReadLine();
 
-                        if (!int.TryParse(_selectivity.ToString(), out _selC))
-                        {
-                            sendToConsole(ConsoleColor.Red, "You must enter a valid value for the selectivity of the column.  Enter -1 to use random selectivity.");
-                            _selectivity = string.Empty;
-                        }
-                        else
-                        {
-                            if (_selC == 0)
+                            // set to default if no value provided
+                            if (_selectivity == string.Empty && _selectivity.Length == 0)
                             {
-                                sendToConsole(ConsoleColor.Red, "Selectivity cannot be set to 0.  Setting selectivity to random (-1).");
-                                _selC = -1;
+                                _selectivity = c.selectivity.ToString();
                             }
 
-                            if (_selC > _csv.numberOfRows)
+                            if (!int.TryParse(_selectivity.ToString(), out _selC))
                             {
-                                sendToConsole(ConsoleColor.Red, "Selectivity cannot be greater than the number of rows.  Setting selectivity to random (-1).");
-                                _selC = -1;
-                            }
-
-                            Int64 _diff = 0;   // we need to check the # of selective values in the range defined
-
-                            if (c.dataType == CsvFormatter.dataTypes.Date)
-                            {
-                                DateTime _minvalue = DateTime.Parse(c.minvalue.ToString());
-                                DateTime _maxValue = DateTime.Parse(c.maxValue.ToString());
-                                TimeSpan t = _maxValue.Subtract(_minvalue);
-                                _diff = (Int64)t.TotalDays;
+                                sendToConsole(ConsoleColor.Red, "You must enter a valid value for the selectivity of the column.  Enter -1 to use random selectivity.");
+                                _selectivity = string.Empty;
                             }
                             else
                             {
-                                Int64 _minValue = Int64.Parse(c.minvalue.ToString());
-                                Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
-                                _diff = ((_maxValue - _minValue) + 1); // needed because we want the values at both ends of the range
-                            }
+                                if (_selC == 0)
+                                {
+                                    sendToConsole(ConsoleColor.Red, "Selectivity cannot be set to 0.  Setting selectivity to random (-1).");
+                                    _selC = -1;
+                                }
 
-                            if (_selC > _diff)
-                            {
-                                sendToConsole(ConsoleColor.Red, "Selectivity cannot be greater than min / max value range.  Setting selectivity to random (-1).");
-                                _selC = -1;
+                                if (_selC > _csv.numberOfRows)
+                                {
+                                    sendToConsole(ConsoleColor.Red, "Selectivity cannot be greater than the number of rows.  Setting selectivity to random (-1).");
+                                    _selC = -1;
+                                }
+
+                                Int64 _diff = 0;   // we need to check the # of selective values in the range defined
+
+                                if (c.dataType == CsvFormatter.dataTypes.Date)
+                                {
+                                    DateTime _minvalue = DateTime.Parse(c.minvalue.ToString());
+                                    DateTime _maxValue = DateTime.Parse(c.maxValue.ToString());
+                                    TimeSpan t = _maxValue.Subtract(_minvalue);
+                                    _diff = (Int64)t.TotalDays;
+                                }
+                                else
+                                {
+                                    Int64 _minValue = Int64.Parse(c.minvalue.ToString());
+                                    Int64 _maxValue = Int64.Parse(c.maxValue.ToString());
+                                    _diff = ((_maxValue - _minValue) + 1); // needed because we want the values at both ends of the range
+                                }
+
+                                if (_selC > _diff)
+                                {
+                                    sendToConsole(ConsoleColor.Red, "Selectivity cannot be greater than min / max value range.  Setting selectivity to random (-1).");
+                                    _selC = -1;
+                                }
+                                c.selectivity = _selC;
                             }
-                            c.selectivity = _selC;
                         }
                     }
                 }
@@ -2832,9 +2930,14 @@ namespace csvdatagen
                 firstRow = false;
 
                 // clone current row to shadow
-                if (repeater)
+                if (repeater || variance)
                 {
                     shadowRow = (string[])currentRow.Clone();
+                }
+
+                // special repeater processing
+                if (repeater)
+                {
                     if (repeatCountValue > 0)
                     {
                         repeatCountValue--;
@@ -2895,21 +2998,38 @@ namespace csvdatagen
         // generates current row
         static bool generateCurrentRow()
         {
+            // first pass
             for (int i = 0; i < _csv.columns.Length; i++)
             {
                 // get current column definition
                 CsvFormatter.column c = _csv.columns[i];
 
-                // in the default, PRO is a special situation that is built up front and RPT must be handled w.r.t. repeatCountValue
-                if ((c.defaultValue != string.Empty && c.defaultValue.Length >= 4) && ((c.defaultValue.Substring(1,3).ToUpper() == "RPT") && (repeatCountValue > 0)))
+                // in the default, PRO is a special situation that is built up front and RPT must be handled w.r.t. repeatCountValue and VAR must be handled w.r.t. firstRow
+                if (forcedValColumn > -1 && forcedValColumn == i)
+                {
+                    // we have a forced value to insert
+                    currentRow[i] = forcedVal.ToString();
+                }
+                else if (c.defaultValue != string.Empty && c.defaultValue.Length >= 4 && c.defaultValue.Substring(0,1).ToUpper() == "&" && ((c.defaultValue.Substring(1, 3).ToUpper() == "LOW") || (c.defaultValue.Substring(1, 3).ToUpper() == "HGH")
+                    || (c.defaultValue.Substring(1, 3).ToUpper() == "MUL") || (c.defaultValue.Substring(1, 3).ToUpper() == "ADD") || (c.defaultValue.Substring(1, 3).ToUpper() == "SUB") || (c.defaultValue.Substring(1, 3).ToUpper() == "DIV") ||
+                    (c.defaultValue.Substring(1, 3).ToUpper() == "EQL") || (c.defaultValue.Substring(1, 3).ToUpper() == "LSS") || (c.defaultValue.Substring(1, 3).ToUpper() == "GTR") || (c.defaultValue.Substring(1,3).ToUpper() == "CON")))
+                {
+                    // this must be deferred and done on the third pass because dependent values may be calculated from the second pass
+                    currentRow[i] = "__DEFERRED_LEVEL_2__";
+                }
+                else if ((c.defaultValue != string.Empty && c.defaultValue.Length >= 4) && ((c.defaultValue.Substring(1,3).ToUpper() == "RPT") && (repeatCountValue > 0)))
                 {
                     // here we actually need to defer because we don't know if the dependent value has been evaluated yet
                     currentRow[i] = "__DEFERRED__";
                 }
-                else if (c.defaultValue != string.Empty && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "PRO")) && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "RPT")))
+                else if ((c.defaultValue != string.Empty && c.defaultValue.Length >= 4) && ((c.defaultValue.Substring(1,3).ToUpper() == "VAR") && (!firstRow)))
                 {
-                    if ((c.defaultValue.Substring(0, 1)) == "&" && ((c.defaultValue.Substring(1, 3).ToUpper() == "ASN") || (c.defaultValue.Substring(1, 3).ToUpper() == "EQL") || (c.defaultValue.Substring(1, 3).ToUpper() == "GTR") ||
-                        (c.defaultValue.Substring(1, 3).ToUpper() == "LSS") || (c.defaultValue.Substring(1,3).ToUpper() == "ACU")))
+                    currentRow[i] = "__DEFERRED__";
+                }
+                else if (c.defaultValue != string.Empty && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "PRO")) && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "RPT")) 
+                    && ((c.defaultValue.Length < 4) || (c.defaultValue.Substring(1,3).ToUpper() != "VAR")))
+                {
+                    if ((c.defaultValue.Substring(0, 1)) == "&" && ((c.defaultValue.Substring(1, 3).ToUpper() == "ASN") || (c.defaultValue.Substring(1,3).ToUpper() == "ACU") || (c.defaultValue.Substring(1,3).ToUpper() == "LKU")))
                     {
                         // we have a special default = function
                         // here we actually need to defer because we don't know if the dependent value has been evaluated yet
@@ -2918,9 +3038,10 @@ namespace csvdatagen
                     else
                     {
                         // we have a default value to set
-                        if (c.defaultValue == "__DEFERRED__")
+                        if (c.defaultValue == "__DEFERRED__" || c.defaultValue == "__DEFERRED_LEVEL_2__")
                         {
                             sendToConsole(ConsoleColor.Red, String.Format(@"Invalid default value specified for column '{0}'", _csv.columns[i].columnName.ToString()));
+                            return false;
                         }
                         currentRow[i] = c.defaultValue;
                     }
@@ -3084,7 +3205,15 @@ namespace csvdatagen
                                     stickyDate = s;
                                 }
                                 stickyDate = stickyDate.AddDays(1);
-                                currentRow[i] = stickyDate.ToString();
+
+                                if (alternateDateFormat)
+                                {
+                                    currentRow[i] = stickyDate.ToString("yyyy-MM-dd");
+                                }
+                                else
+                                {
+                                    currentRow[i] = stickyDate.ToString("MM/dd/yyyy");
+                                }
                             }
                             else
                             {
@@ -3123,6 +3252,36 @@ namespace csvdatagen
 
                     switch (_cmd.ToUpper())
                     {
+                        case "LKU":
+                            // lookup based on an ordinal value - we must get it first
+                            // it must be an int
+                            if (_csv.columns[_colId].dataType != CsvFormatter.dataTypes.Integer)
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Reference column [{0}] for lookup must be of integer data type to use with &LKU special default.", _colId.ToString()));
+                                continue;
+                            }
+
+                            if (currentRow[_colId] == null || currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Reference column [{0}] for lookup must be a literal randomly generated value to use with &LKU special default.  It cannot be a special default result value.", _colId.ToString()));
+                                continue;
+                            }
+
+                            // get the value
+                            Int64 idx = Int64.Parse(currentRow[_colId]);
+
+                            // adjust idx
+                            idx--;
+
+                            // we have a list of provided values that were loaded into the j-array
+                            // we must get the location in the selectivity j-array 
+                            int s = _csv.columns[i].selColumn;
+
+                            // get an indexed into the selectivity j-array
+                            currentRow[i] = selColumns[s][idx];
+
+                            break;
+
                         case "ACU":
                             // this means that we are accumulating values for assignment.  These must be done upfront based on the reference column to simply finding the original accumulated value
 
@@ -3223,13 +3382,13 @@ namespace csvdatagen
                                         }
                                     }
                                 }
-                                Debug.WriteLine("popped");
+                                // Debug.WriteLine("popped");
                                 currentRow[i] = accumRow[i].Pop().ToString();
                             }
                             else
                             {
                                 // now a new value, so we just pop the current value
-                                Debug.WriteLine("popped");
+                                // Debug.WriteLine("popped");
                                 currentRow[i] = accumRow[i].Pop().ToString();
                             }
 
@@ -3311,121 +3470,85 @@ namespace csvdatagen
 
                             break;
 
-                        case "EQL":
-                            // this means assign the same number as the reference column
+                        case "VAR":
+                            // add variance from the previous - the variance will be stored in the reference column -> i.e. &VAR[variance]
 
-                            // safety checks first
-                            // is the reference outside the bounds of the array
-                            if (_colId > (currentRow.Length -1))
+                            if (_csv.columns[i].dataType != CsvFormatter.dataTypes.Integer && _csv.columns[i].dataType != CsvFormatter.dataTypes.Decimal)
                             {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Data type for column '{0}' does not support VAR special default command.", _csv.columns[i].columnName.ToString()));
                                 continue;
                             }
 
-                            // is there a value in that referenced column
-                            if (currentRow[_colId] == null)
+                            if (_csv.columns[i].dataType == CsvFormatter.dataTypes.Integer)
                             {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
+                                Int64 _prev = Int64.Parse(shadowRow[i]);
+                                Int64 _val = 0;
 
-                            // assign same value "EQL"
-                            if (currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" && _csv.columns[_colId].defaultValue == "&RPT" && repeatCountValue > 0)
-                            {
-                                currentRow[i] = shadowRow[_colId];
+                                // here the colId is the variance instead of a reference
+                                Int64 salt = Int64.Parse(getRandomIntegerAsString(0, _colId));
+                                int op = int.Parse(getRandomIntegerAsString(0, 3));
+
+                                if (op == 0)
+                                {
+                                    // do nothing
+                                    currentRow[i] = _prev.ToString();
+                                }
+                                else if (op == 1)
+                                {
+                                    // subtract
+                                    Int64 _newval = (_prev - salt);
+
+                                    if (_newval < 0 && !allowNegativeVariance)
+                                    {
+                                        currentRow[i] = _prev.ToString();
+                                    }
+                                    else
+                                    {
+                                        currentRow[i] = _newval.ToString();
+                                    }
+                                }
+                                else
+                                {
+                                    currentRow[i] = (_prev + salt).ToString();
+                                }
+                                
                             }
                             else
                             {
-                                currentRow[i] = currentRow[_colId];
-                            }
-                            break;
+                                // must be decimal at this point
 
-                        case "GTR":
-                            // this means we must have a greater value
+                                decimal _prev = Decimal.Parse(shadowRow[i]);
+                                decimal _val = 0.00m;
 
-                            // safety checks first
-                            // is the reference outside the bounds of the array
-                            if (_colId > (currentRow.Length - 1))
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
+                                Decimal salt = Decimal.Parse(getRandomDecimal(0, (long)_colId, _csv.columns[i].mantissa));
+                                int op = int.Parse(getRandomIntegerAsString(0, 3));
 
-                            // is there a value in that referenced column
-                            if (currentRow[_colId] == null)
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
+                                if (op == 0)
+                                {
+                                    // do nothing
+                                    currentRow[i] = _prev.ToString();
+                                }
+                                else if (op == 1)
+                                {
+                                    // subtract
+                                    Decimal _newval = (_prev - salt);
 
-                            // this number must be "greater" so we set the minimum here and validate this is a numeric type
-                            Int64 _newMin = 0;
+                                    if (_newval < 0 && !allowNegativeVariance)
+                                    {
+                                        currentRow[i] = _prev.ToString();
+                                    }
+                                    else
+                                    {
+                                        currentRow[i] = _newval.ToString();
+                                    }
+                                }
+                                else
+                                {
+                                    currentRow[i] = (_prev + salt).ToString();
+                                }
 
-                            // if still set to __DEFERRED__ then we pre-assign
-                            if (currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" && _csv.columns[_colId].defaultValue == "&RPT" && repeatCountValue > 0)
-                            {
-                                // pre-assign?
-                                currentRow[_colId] = shadowRow[_colId];
-                            }
-
-                            if (!Int64.TryParse(currentRow[_colId].ToString(), out _newMin))
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is not a numeric type for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
                             }
 
-                            // now we must verify the new number is not larger than the current maxValue
-                            if (_newMin >= Int64.Parse(_csv.columns[i].maxValue))
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column value is larger than the defined max value for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
-
-                            currentRow[i] = getRandomIntegerAsString(_newMin, Int64.Parse(_csv.columns[i].maxValue));
-                            break;
-
-                        case "LSS":
-                            // this means we must have a lesser value
-
-                            // safety checks first
-                            // is the reference outside the bounds of the array
-                            if (_colId > (currentRow.Length - 1))
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
-
-                            // is there a value in that referenced column
-                            if (currentRow[_colId] == null)
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
-
-                            // this number must be "lesser" so we set the maximum here and validate this is a numeric type
-                            Int64 _newMax = 0;
-
-                            // if still set to __DEFERRED__ then we pre-assign
-                            if (currentRow[_colId].ToString().ToUpper() == "__DEFERRED__" && _csv.columns[_colId].defaultValue == "&RPT" && repeatCountValue > 0)
-                            {
-                                // pre-assign?
-                                currentRow[_colId] = shadowRow[_colId];
-                            }
-
-                            if (!Int64.TryParse(currentRow[_colId].ToString(), out _newMax))
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is not a numeric type for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
-
-                            // now we must verify the new number is not smaller than the current minValue
-                            if (_newMax <= Int64.Parse(_csv.columns[i].minvalue))
-                            {
-                                sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column value is smaller than the defined min value for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
-                                continue;
-                            }
-
-                            currentRow[i] = getRandomIntegerAsString(Int64.Parse(_csv.columns[i].minvalue), _newMax);
                             break;
 
                         case "RPT":
@@ -3443,6 +3566,747 @@ namespace csvdatagen
                 }
             }
 
+            // process level 2 deferrals - these values have to be calculated after other deferred values have been calculated
+            if (secondaryDeferrals)
+            {
+                for (int i = 0; i < _csv.columns.Length; i++)
+                {
+                    if (currentRow[i] == "__DEFERRED_LEVEL_2__")
+                    {
+                        // we must get the default string from the column
+                        string _default = _csv.columns[i].defaultValue.ToString();
+                        string _cmd = _default.Substring(1, 3).ToString();
+
+                        // we must extract the reference col id
+                        int _colId_1 = 0;
+                        int _colId_2 = 0;
+                        string[] cols = new string[0];
+
+                        // get col Ids
+                        if (_default.Length > 5)
+                        {
+                            cols = (_default.Substring(5).Replace("]", "")).Split(',');
+                        }
+
+                        // safety check, we only support 2 at most
+                        if (cols.Length > 2)
+                        {
+                            sendToConsole(ConsoleColor.Red, String.Format(@"More than two values for math function special defaults is not supported."));
+                            return false;
+                        }
+
+                        // original old case
+                        if (cols.Length == 1)
+                        {
+                            if (!int.TryParse(cols[0], out _colId_1))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Unable to extract dependent column id for special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+                        }
+                        
+                        if (cols.Length == 2) // new math functions
+                        {
+                            if (!int.TryParse(cols[0], out _colId_1))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Unable to extract dependent column id for special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+                            if (!int.TryParse(cols[1], out _colId_2))
+                            {
+                                sendToConsole(ConsoleColor.Red, String.Format(@"Unable to extract dependent column id for special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                continue;
+                            }
+                        }
+
+                        // run cmd
+                        switch (_cmd.ToUpper())
+                        {
+                            case "EQL":
+                                // this means assign the same number as the reference column
+
+                                // safety checks first
+                                // is the reference outside the bounds of the array
+                                if (_colId_1 > (currentRow.Length - 1))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // is there a value in that referenced column
+                                if (currentRow[_colId_1] == null)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // assign same value "EQL"
+                                if ((currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED_LEVEL_2__") && _csv.columns[_colId_1].defaultValue == "&RPT" && repeatCountValue > 0)
+                                {
+                                    currentRow[i] = shadowRow[_colId_1];
+                                }
+                                else
+                                {
+                                    currentRow[i] = currentRow[_colId_1];
+                                }
+                                break;
+
+                            case "GTR":
+                                // this means we must have a greater value
+
+                                // safety checks first
+                                // is the reference outside the bounds of the array
+                                if (_colId_1 > (currentRow.Length - 1))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // is there a value in that referenced column
+                                if (currentRow[_colId_1] == null)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // this number must be "greater" so we set the minimum here and validate this is a numeric type
+                                Int64 _newMin = 0;
+
+                                // if still set to __DEFERRED__ then we pre-assign
+                                if ((currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED_LEVEL_2__") && _csv.columns[_colId_1].defaultValue == "&RPT" && repeatCountValue > 0)
+                                {
+                                    // pre-assign?
+                                    currentRow[_colId_1] = shadowRow[_colId_1];
+                                }
+
+                                if (!Int64.TryParse(currentRow[_colId_1].ToString(), out _newMin))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is not a numeric type for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // now we must verify the new number is not larger than the current maxValue
+                                if (_newMin >= Int64.Parse(_csv.columns[i].maxValue))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column value is larger than the defined max value for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                currentRow[i] = getRandomIntegerAsString(_newMin, Int64.Parse(_csv.columns[i].maxValue));
+                                break;
+
+                            case "LSS":
+                                // this means we must have a lesser value
+
+                                // safety checks first
+                                // is the reference outside the bounds of the array
+                                if (_colId_1 > (currentRow.Length - 1))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is outside the bounds of the current row for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // is there a value in that referenced column
+                                if (currentRow[_colId_1] == null)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is NULL for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // this number must be "lesser" so we set the maximum here and validate this is a numeric type
+                                Int64 _newMax = 0;
+
+                                // if still set to __DEFERRED__ then we pre-assign
+                                if ((currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED_LEVEL_2__") && _csv.columns[_colId_1].defaultValue == " & RPT" && repeatCountValue > 0)
+                                {
+                                    // pre-assign?
+                                    currentRow[_colId_1] = shadowRow[_colId_1];
+                                }
+
+                                if (!Int64.TryParse(currentRow[_colId_1].ToString(), out _newMax))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column is not a numeric type for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // now we must verify the new number is not smaller than the current minValue
+                                if (_newMax <= Int64.Parse(_csv.columns[i].minvalue))
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"The referenced column value is smaller than the defined min value for the special default in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                currentRow[i] = getRandomIntegerAsString(Int64.Parse(_csv.columns[i].minvalue), _newMax);
+                                break;
+
+                            case "ADD":
+                                // add the values for col1 & col2 
+
+                                if (_csv.columns[_colId_1].dataType != _csv.columns[_colId_2].dataType)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Columns '{0}' and '{1}' do not have the same data type and are not supported for the ADD operation.", _csv.columns[_colId_1].columnName.ToString(), _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (_csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Integer && _csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Decimal)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"One or more columns are not using a supported data type for the ADD operation."));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_1] == null || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for ADD operation.", _csv.columns[_colId_1].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_2] == null || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for ADD operation.", _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // we know they are the same data types so test col 1 and we know now they are either INT or DECIMAL
+                                if (_csv.columns[_colId_1].dataType == CsvFormatter.dataTypes.Integer)
+                                {
+                                    // we have an INT
+                                    Int64 _a;
+
+                                    if (!Int64.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    Int64 _b;
+
+                                    if (!Int64.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    currentRow[i] = (_a + _b).ToString();
+                                }
+                                else
+                                {
+                                    // we have a decimal
+                                    decimal _a;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    decimal _b;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    currentRow[i] = (_a + _b).ToString();
+                                }
+
+                                break;
+
+                            case "MUL":
+                                // multiply values for col1 & col2
+
+                                if (_csv.columns[_colId_1].dataType != _csv.columns[_colId_2].dataType)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Columns '{0}' and '{1}' do not have the same data type and are not supported for the MUL operation.", _csv.columns[_colId_1].columnName.ToString(), _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (_csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Integer && _csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Decimal)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"One or more columns are not using a supported data type for the MUL operation."));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_1] == null || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for MUL operation.", _csv.columns[_colId_1].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_2] == null || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for MUL operation.", _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // we know they are the same data types so test col 1 and we know now they are either INT or DECIMAL
+                                if (_csv.columns[_colId_1].dataType == CsvFormatter.dataTypes.Integer)
+                                {
+                                    // we have an INT
+                                    Int64 _a;
+
+                                    if (!Int64.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    Int64 _b;
+
+                                    if (!Int64.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    currentRow[i] = (_a * _b).ToString();
+                                }
+                                else
+                                {
+                                    // we have a decimal
+                                    decimal _a;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    decimal _b;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    currentRow[i] = (_a * _b).ToString();
+                                }
+
+                                break;
+
+                            case "SUB":
+                                // subtract values for col1 & col2 (col1 - col2)
+
+                                if (_csv.columns[_colId_1].dataType != _csv.columns[_colId_2].dataType)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Columns '{0}' and '{1}' do not have the same data type and are not supported for the SUB operation.", _csv.columns[_colId_1].columnName.ToString(), _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (_csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Integer && _csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Decimal)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"One or more columns are not using a supported data type for the SUB operation."));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_1] == null || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for SUB operation.", _csv.columns[_colId_1].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_2] == null || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for SUB operation.", _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // we know they are the same data types so test col 1 and we know now they are either INT or DECIMAL
+                                if (_csv.columns[_colId_1].dataType == CsvFormatter.dataTypes.Integer)
+                                {
+                                    // we have an INT
+                                    Int64 _a;
+
+                                    if (!Int64.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    Int64 _b;
+
+                                    if (!Int64.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    currentRow[i] = (_a - _b).ToString();
+                                }
+                                else
+                                {
+                                    // we have a decimal
+                                    decimal _a;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    decimal _b;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    currentRow[i] = (_a - _b).ToString();
+                                }
+
+                                break;
+
+                            case "DIV":
+                                // divide values for col1 & col2 (col1 / col2)
+
+                                if (_csv.columns[_colId_1].dataType != _csv.columns[_colId_2].dataType)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Columns '{0}' and '{1}' do not have the same data type and are not supported for the DIV operation.", _csv.columns[_colId_1].columnName.ToString(), _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (_csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Integer && _csv.columns[_colId_1].dataType != CsvFormatter.dataTypes.Decimal)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"One or more columns are not using a supported data type for the DIV operation."));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_1] == null || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_1].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for DIV operation.", _csv.columns[_colId_1].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_2] == null || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED__" || currentRow[_colId_2].ToString().ToUpper() == "__DEFERRED_LEVEL_2__")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is null or not supported for DIV operation.", _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (currentRow[_colId_2] == "0")
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in '{0}' is zero and would result in DIVISION_BY_ZERO error.  Skipping.", _csv.columns[_colId_2].columnName.ToString()));
+                                    continue;
+                                }
+
+                                // we know they are the same data types so test col 1 and we know now they are either INT or DECIMAL
+                                if (_csv.columns[_colId_1].dataType == CsvFormatter.dataTypes.Integer)
+                                {
+                                    // we have an INT
+                                    Int64 _a;
+
+                                    if (!Int64.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    Int64 _b;
+
+                                    if (!Int64.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse interger value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    currentRow[i] = (_a / _b).ToString();
+                                }
+                                else
+                                {
+                                    // we have a decimal
+                                    decimal _a;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_1].ToString(), out _a))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    decimal _b;
+
+                                    if (!Decimal.TryParse(currentRow[_colId_2].ToString(), out _b))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse decimal value from column '{0}'", _csv.columns[_colId_1].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    decimal _c = (_a / _b);
+                                    byte m = _csv.columns[i].mantissa;
+                                    string _c_man = _c.ToString().Substring(_c.ToString().IndexOf('.') + 1);
+                                    string _c_int = _c.ToString().Substring(0, _c.ToString().IndexOf('.'));
+                                    string _answer = "0.00";
+
+                                    if (_c_man.Length > m)
+                                    {
+                                        _answer = String.Format(@"{0}.{1}", _c_int.ToString(), _c_man.Substring(0, m));
+                                    }
+                                    else
+                                    {
+                                        _answer = String.Format(@"{0}.{1}", _c_int.ToString(), _c_man.ToString());
+                                    }
+
+
+                                    currentRow[i] = _answer;
+                                }
+
+                                break;
+
+                            case "HGH":
+                                // we will go through and find the highest value of this data type and add a random value to it
+
+                                if (_csv.columns[i].dataType != CsvFormatter.dataTypes.Integer && _csv.columns[i].dataType != CsvFormatter.dataTypes.Decimal)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Data type for column '{0}' does not support HGH special default command.", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (_csv.columns[i].dataType == CsvFormatter.dataTypes.Integer)
+                                {
+                                    Int64 _ceiling = 0;
+                                    Int64 _val = 0;
+
+                                    for (int j = 0; j < _csv.columns.Length; j++)
+                                    {
+                                        // we need to skip ourselves
+                                        if (i == j)
+                                        {
+                                            continue;
+                                        }
+
+                                        if (_csv.columns[j].dataType == CsvFormatter.dataTypes.Integer && currentRow[j] != "__DEFERRED_LEVEL_2__" && !_csv.columns[j].columnName.ToUpper().Contains("IGNORE"))
+                                        {
+                                            if (!Int64.TryParse(currentRow[j].ToString(), out _val))
+                                            {
+                                                sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for HGH comparison operation in column '{0}'", _csv.columns[j].columnName.ToString()));
+                                                continue;
+                                            }
+
+                                            // we have the val
+                                            if (_val > _ceiling)
+                                            {
+                                                _ceiling = _val;
+                                            }
+                                        }
+                                    }
+
+                                    Int64 _min;
+                                    Int64 _max;
+
+                                    if (!Int64.TryParse(_csv.columns[i].minvalue, out _min))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for min value for HGH comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    if (!Int64.TryParse(_csv.columns[i].maxValue, out _max))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for max value for HGH comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    Int64 salt = Int64.Parse(getRandomIntegerAsString(_min, _max));
+
+                                    currentRow[i] = (_ceiling + salt).ToString();
+                                }
+                                else
+                                {
+                                    // must be decimal at this point
+
+                                    decimal _ceiling = 0.00m;
+                                    decimal _val = 0.00m;
+
+                                    for (int j = 0; j < _csv.columns.Length; j++)
+                                    {
+                                        // we need to skip ourselves
+                                        if (i == j)
+                                        {
+                                            continue;
+                                        }
+
+                                        if (_csv.columns[j].dataType == CsvFormatter.dataTypes.Decimal && currentRow[j] != "__DEFERRED_LEVEL_2__" && !_csv.columns[j].columnName.ToUpper().Contains("IGNORE"))
+                                        {
+                                            if (!decimal.TryParse(currentRow[j].ToString(), out _val))
+                                            {
+                                                sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for HGH comparison operation in column '{0}'", _csv.columns[j].columnName.ToString()));
+                                                continue;
+                                            }
+
+                                            // we have the val
+                                            if (_val > _ceiling)
+                                            {
+                                                _ceiling = _val;
+                                            }
+                                        }
+                                    }
+
+                                    decimal _min;
+                                    decimal _max;
+
+                                    if (!decimal.TryParse(_csv.columns[i].minvalue, out _min))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for min value for HGH comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    if (!decimal.TryParse(_csv.columns[i].maxValue, out _max))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for min value for HGH comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    decimal salt = Decimal.Parse(getRandomDecimal((long)_min, (long)_max, _csv.columns[i].mantissa));
+
+                                    currentRow[i] = (_ceiling + salt).ToString();
+
+                                }
+
+                                break;
+
+                            case "LOW":
+                                // we will go through and find the lowest value of this data type and add a random value to it
+
+                                if (_csv.columns[i].dataType != CsvFormatter.dataTypes.Integer && _csv.columns[i].dataType != CsvFormatter.dataTypes.Decimal)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Data type for column '{0}' does not support LOW special default command.", _csv.columns[i].columnName.ToString()));
+                                    continue;
+                                }
+
+                                if (_csv.columns[i].dataType == CsvFormatter.dataTypes.Integer)
+                                {
+                                    Int64 _floor = 1000000000;
+                                    Int64 _val = 0;
+
+                                    for (int j = 0; j < _csv.columns.Length; j++)
+                                    {
+                                        // we need to skip ourselves
+                                        if (i == j)
+                                        {
+                                            continue;
+                                        }
+
+                                        if (_csv.columns[j].dataType == CsvFormatter.dataTypes.Integer && currentRow[j] != "__DEFERRED_LEVEL_2__" && !_csv.columns[j].columnName.ToUpper().Contains("IGNORE"))
+                                        {
+                                            if (!Int64.TryParse(currentRow[j].ToString(), out _val))
+                                            {
+                                                sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for LOW comparison operation in column '{0}'", _csv.columns[j].columnName.ToString()));
+                                                continue;
+                                            }
+
+                                            // we have the val
+                                            if (_val < _floor)
+                                            {
+                                                _floor = _val;
+                                            }
+                                        }
+                                    }
+
+                                    Int64 _min;
+                                    Int64 _max;
+
+                                    if (!Int64.TryParse(_csv.columns[i].minvalue, out _min))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for min value for LOW comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    if (!Int64.TryParse(_csv.columns[i].maxValue, out _max))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for max value for LOW comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    Int64 salt = Int64.Parse(getRandomIntegerAsString(_min, _max));
+
+                                    Int64 _answer = (_floor - salt);
+
+                                    if (_answer < 0)
+                                    {
+                                        _answer = 0;
+                                    }
+
+                                    currentRow[i] = _answer.ToString();
+                                }
+                                else
+                                {
+                                    // must be decimal at this point
+
+                                    decimal _floor = 1000000000.00m;
+                                    decimal _val = 0.00m;
+
+                                    for (int j = 0; j < _csv.columns.Length; j++)
+                                    {
+                                        // we need to skip ourselves
+                                        if (i == j)
+                                        {
+                                            continue;
+                                        }
+
+                                        if (_csv.columns[j].dataType == CsvFormatter.dataTypes.Decimal && currentRow[j] != "__DEFERRED_LEVEL_2__" && !_csv.columns[j].columnName.ToUpper().Contains("IGNORE"))
+                                        {
+                                            if (!decimal.TryParse(currentRow[j].ToString(), out _val))
+                                            {
+                                                sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for LOW comparison operation in column '{0}'", _csv.columns[j].columnName.ToString()));
+                                                continue;
+                                            }
+
+                                            // we have the val
+                                            if (_val < _floor)
+                                            {
+                                                _floor = _val;
+                                            }
+                                        }
+                                    }
+
+                                    decimal _min;
+                                    decimal _max;
+
+                                    if (!decimal.TryParse(_csv.columns[i].minvalue, out _min))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for min value for LOW comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    if (!decimal.TryParse(_csv.columns[i].maxValue, out _max))
+                                    {
+                                        sendToConsole(ConsoleColor.Red, String.Format(@"Failed to parse value for min value for LOW comparison operation in column '{0}'", _csv.columns[i].columnName.ToString()));
+                                        continue;
+                                    }
+
+                                    decimal salt = Decimal.Parse(getRandomDecimal((long)_min, (long)_max, _csv.columns[i].mantissa));
+
+                                    decimal _answer = (_floor - salt);
+
+                                    if (_answer < 0)
+                                    {
+                                        _answer = 0.00m;
+                                    }
+
+                                    currentRow[i] = _answer.ToString();
+
+                                }
+
+                                break;
+
+                            case "CON":
+
+                                // really no testing to do since everything is treated as a string - just check they aren't null?
+                                if (currentRow[_colId_1] == null || currentRow[_colId_2] == null)
+                                {
+                                    sendToConsole(ConsoleColor.Red, String.Format(@"Value in column {0} or column {1} is null and does not support CON operation.", _colId_1.ToString(), _colId_2.ToString()));
+                                    continue;
+                                }
+
+                                currentRow[i] = String.Format(@"{0}{1}{2}", currentRow[_colId_1].ToString(), concatChar.ToString(), currentRow[_colId_2].ToString());
+
+                                break;
+                        }
+                    }
+                }
+            }
+
+            // we wait
             if (WAIT_FLAG)
             {
                 Thread.Sleep(WAIT_TIME);
@@ -3806,4 +4670,5 @@ namespace csvdatagen
         }
 
     }
+
 }
