@@ -7,3 +7,4 @@ C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.P
 C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.csproj.GenerateResource.cache
 C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.exe
 C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.pdb
+C:\Users\jamesask\Documents\GitHub\Utilities\ClipPad\ClipPad\obj\Debug\ClipPad.csproj.CoreCompileInputs.cache
