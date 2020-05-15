@@ -1,0 +1,7 @@
+C:\Users\jamesask\Desktop\WhereParser\WhereParser\ConsoleApp1\bin\Release\whereparse.exe.config
+C:\Users\jamesask\Desktop\WhereParser\WhereParser\ConsoleApp1\bin\Release\whereparse.exe
+C:\Users\jamesask\Desktop\WhereParser\WhereParser\ConsoleApp1\bin\Release\whereparse.pdb
+C:\Users\jamesask\Desktop\WhereParser\WhereParser\ConsoleApp1\obj\Release\WhereParser.csprojAssemblyReference.cache
+C:\Users\jamesask\Desktop\WhereParser\WhereParser\ConsoleApp1\obj\Release\WhereParser.csproj.CoreCompileInputs.cache
+C:\Users\jamesask\Desktop\WhereParser\WhereParser\ConsoleApp1\obj\Release\whereparse.exe
+C:\Users\jamesask\Desktop\WhereParser\WhereParser\ConsoleApp1\obj\Release\whereparse.pdb
