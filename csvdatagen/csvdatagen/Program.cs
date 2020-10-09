@@ -46,6 +46,7 @@ namespace csvdatagen
     #  v1.0.0.24    -  02/09/2020   Added accumalating capability with &ACU[] special default    
     #  v1.0.0.25    -  02/17/2020   Added forced value substitution
     #  v1.0.0.26    -  02/17/2020   Added new special defaults -> &VAR, &ADD, &MUL, &SUB, &DIV, &HGH, &LOW, &LKU, and &CON
+    #  v1.0.0.27    -  10/08/2020   Added "hidden columns" which can be used for calculations but are not written.  Implemented using a "**" added to the column name to keep backward compatability for older templates.
     #
     #
     */
@@ -1362,6 +1363,13 @@ namespace csvdatagen
                 int cnt = 0;
                 foreach (CsvFormatter.column c in _csv.columns)
                 {
+
+                    // if the colname contains "**" then this is a "hidden" column and should not be printed
+                    if (c.columnName.ToString().Contains("**"))
+                    {
+                        continue;
+                    }
+
                     if (cnt > 0)
                     {
                         _headers += ",";
@@ -1840,11 +1848,11 @@ namespace csvdatagen
             help.Append(Environment.NewLine);
             help.Append("&ASN[XX]        Uses the value from column 'XX' to calculate an index into the provided value list.  Therefore, the same value will always be assigned for value 'XX' from the value list.");
             help.Append(Environment.NewLine);
-            help.Append("&EQL[XX]        Uses the same value as that found in column 'XX'");
+            help.Append("&EQL[XX]*       Uses the same value as that found in column 'XX'");
             help.Append(Environment.NewLine);
-            help.Append("&GTR[XX]        Value used must be greater than the value in column 'XX'");
+            help.Append("&GTR[XX]*       Value used must be greater than the value in column 'XX'");
             help.Append(Environment.NewLine);
-            help.Append("&LSS[XX]        Value used must be lesser than the value in column 'XX'");
+            help.Append("&LSS[XX]*       Value used must be lesser than the value in column 'XX'");
             help.Append(Environment.NewLine);
             help.Append("&PRO[XX,YY,..]  Values are taken in proportions of 'XX', 'YY', and so on from the list of value lists.  'XX' and 'YY' values must be provided in decimal form like .05 for 5%, comma separated.  Value lists must be separated by semi-colons.");
             help.Append(Environment.NewLine);
@@ -1854,21 +1862,24 @@ namespace csvdatagen
             help.Append(Environment.NewLine);
             help.Append("&VAR[XX]        Applies a variance in each row to the original seed value which is randomly generated.  The variance is in the range of minvalue and maxvalue.  Only supports INT and DECIMAL data types.");
             help.Append(Environment.NewLine);
-            help.Append("&MUL[X,Y]       Multiples values generated in columns X and Y for the current row (X * Y).  Only supports INT and DECIMAL data types.");
+            help.Append("&MUL[X,Y]*      Multiples values generated in columns X and Y for the current row (X * Y).  Only supports INT and DECIMAL data types.");
             help.Append(Environment.NewLine);
-            help.Append("&ADD[X,Y]       Adds values generated in columns X and Y for the current row (X + Y).  Only supports INT and DECIMAL data types.");
+            help.Append("&ADD[X,Y]*      Adds values generated in columns X and Y for the current row (X + Y).  Only supports INT and DECIMAL data types.");
             help.Append(Environment.NewLine);
-            help.Append("&SUB[X,Y]       Subtracts value in column Y from value in column X for current row (X - Y).  Only supports INT and DECIMAL data types.");
+            help.Append("&SUB[X,Y]*      Subtracts value in column Y from value in column X for current row (X - Y).  Only supports INT and DECIMAL data types.");
             help.Append(Environment.NewLine);
-            help.Append("&DIV[X,Y]       Divides value in column X by value in column Y for current row (X / Y).  Only supports INT and DECIMAL data types.");
+            help.Append("&DIV[X,Y]*      Divides value in column X by value in column Y for current row (X / Y).  Only supports INT and DECIMAL data types.");
             help.Append(Environment.NewLine);
-            help.Append("&HGH            Generates a value based on the column data type that is the highest value in the row of that data type.  Only supports INT and DECIMAL data types.");
+            help.Append("&HGH*           Generates a value based on the column data type that is the highest value in the row of that data type.  Only supports INT and DECIMAL data types.");
             help.Append(Environment.NewLine);
-            help.Append("&LOW            Generates a value based on the column data type that is the lowest value in the row of that data type.  Only supports INT and DECIMAL data types.");
+            help.Append("&LOW*           Generates a value based on the column data type that is the lowest value in the row of that data type.  Only supports INT and DECIMAL data types.");
             help.Append(Environment.NewLine);
-            help.Append("&CON[X,Y]       Concatenates string data in column X and column y with option character supplied with /Z.");
+            help.Append("&CON[X,Y]*      Concatenates string data in column X and column y with option character supplied with /Z.");
             help.Append(Environment.NewLine);
             help.Append("&LKU[X]         Uses an ordinal position value - which cannot be a special default calculated value - to perform a lookup against the supplied value list.");
+            help.Append(Environment.NewLine);
+            help.Append(Environment.NewLine);
+            help.Append("NOTE: Appending two asterisks '**' to the column name will mark that column as 'hidden'.  The column will be generated but will not be written to the output files.");
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
             help.Append(Environment.NewLine);
@@ -4384,15 +4395,23 @@ namespace csvdatagen
                 StringBuilder sb = new StringBuilder();
 
                 // now loop through the columns
+                int colCnt = 0;
                 for (int j = 0; j < cache.GetLength(1); j++)
                 {
+                    // if the colname contains "**" then this is a "hidden" column and should not be printed
+                    if (_csv.columns[j].columnName.ToString().Contains("**"))
+                    {
+                        continue;
+                    }
+
                     // build one line
-                    if (j > 0)
+                    if (colCnt > 0)
                     {
                         sb.Append(FIELD_TERMINATOR);
                     }
 
                     sb.Append(cache[i, j].ToString());
+                    colCnt++;
 
                 } // for - building csv line
 

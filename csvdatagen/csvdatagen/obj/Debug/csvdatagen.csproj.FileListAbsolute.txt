@@ -24,3 +24,4 @@ C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csv
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.csproj.CopyComplete
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.exe
 C:\Users\jamesask\Documents\GitHub\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.pdb
+C:\Users\jamesask\Documents\Github\Utilities\csvdatagen\csvdatagen\obj\Debug\csvdatagen.csproj.CoreCompileInputs.cache
